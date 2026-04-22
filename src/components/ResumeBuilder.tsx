@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Define the shape of the data we expect
 interface ResumeData {
   id?: number;
+  fullName?: string; // Naya field add kiya
   title: string;
   summary: string;
   skills: string;
@@ -16,6 +17,7 @@ interface ResumeBuilderProps {
 }
 
 const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccessReturn }) => {
+  const [fullName, setFullName] = useState(''); // Nayi state
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [skills, setSkills] = useState('');
@@ -29,6 +31,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
   // If we are editing, pre-fill the form with the existing data
   useEffect(() => {
     if (existingResume) {
+      setFullName(existingResume.fullName || ''); // Edit ke time naam pre-fill hoga
       setTitle(existingResume.title || '');
       setSummary(existingResume.summary || '');
       setSkills(existingResume.skills || '');
@@ -42,7 +45,8 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     setIsLoading(true);
     setStatusMessage('');
 
-    const resumeContentObj = { summary, skills, experience, education };
+    // JSON ke andar fullName bhi bhej rahe hain
+    const resumeContentObj = { fullName, summary, skills, experience, education };
     const payload = {
       title: title,
       content: JSON.stringify(resumeContentObj)
@@ -50,9 +54,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
 
     const userEmail = localStorage.getItem('userEmail') || 'testuser@capgemini.com';
     
-    // Determine if we are updating or creating
     const isUpdating = !!existingResume?.id;
-    
     const endpoint = isUpdating 
       ? `http://localhost:8082/resume/update/${existingResume.id}`  
       : 'http://localhost:8082/resume/create';
@@ -71,11 +73,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
       if (response.ok) {
         setStatusMessage(isUpdating ? 'Resume updated successfully!' : 'Resume saved successfully!');
         setIsSuccess(true);
-        
-        // Wait 1.5 seconds so the user sees the success message, then return to dashboard
-        setTimeout(() => {
-          onSuccessReturn();
-        }, 1500);
+        setTimeout(() => { onSuccessReturn(); }, 1500);
       } else {
         setStatusMessage('Failed to save resume. Server rejected the request.');
         setIsSuccess(false);
@@ -106,6 +104,17 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* NAYA INPUT FIELD: Full Name */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name (For this Resume)</label>
+          <input 
+            type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)}
+            placeholder="e.g., Virat Kohli"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900"
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Resume Title</label>
           <input 
