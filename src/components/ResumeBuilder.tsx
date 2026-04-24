@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from 'react';
-
-// Define the shape of the data we expect
-interface ResumeData {
-  id?: number;
-  fullName?: string; // Naya field add kiya
-  title: string;
-  summary: string;
-  skills: string;
-  experience: string;
-  education: string;
-}
+import { saveResume } from '../services/resumeService';
+import { generateSummaryWithAI } from '../services/aiService'; // 👈 Naya Import
+import type { Resume, ResumePayload } from '../types/resume';
+import { getUserEmail } from '../utils/storage';
+import { CheckCircle2, Sparkles, X, Zap } from 'lucide-react'; // 👈 Zap icon for AI speed
 
 interface ResumeBuilderProps {
-  existingResume?: ResumeData | null;
+  existingResume?: Resume | null;
   onSuccessReturn: () => void;
 }
 
 const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccessReturn }) => {
-  const [fullName, setFullName] = useState(''); // Nayi state
+  const [fullName, setFullName] = useState('');
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [skills, setSkills] = useState('');
@@ -27,11 +21,13 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
   const [statusMessage, setStatusMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 👈 AI Loading State
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
-  // If we are editing, pre-fill the form with the existing data
   useEffect(() => {
     if (existingResume) {
-      setFullName(existingResume.fullName || ''); // Edit ke time naam pre-fill hoga
+      setFullName(existingResume.fullName || '');
       setTitle(existingResume.title || '');
       setSummary(existingResume.summary || '');
       setSkills(existingResume.skills || '');
@@ -40,46 +36,52 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     }
   }, [existingResume]);
 
+  // 👈 THE AI ENGINE HANDLER
+  const handleAIGenerate = async () => {
+    if (!title.trim()) {
+      setStatusMessage('Please enter a Resume Title first so AI knows what to write!');
+      setIsSuccess(false);
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    setStatusMessage('Groq AI is thinking... ⚡');
+    setIsSuccess(true);
+
+    try {
+      const generatedText = await generateSummaryWithAI(title);
+      setSummary(generatedText);
+      setStatusMessage('AI Summary generated successfully! ✨');
+      setIsSuccess(true);
+    } catch (err) {
+      setStatusMessage('Failed to connect to AI Service. Ensure port 8085 is running.');
+      setIsSuccess(false);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setStatusMessage('');
 
-    // JSON ke andar fullName bhi bhej rahe hain
     const resumeContentObj = { fullName, summary, skills, experience, education };
-    const payload = {
-      title: title,
+    const payload: ResumePayload = {
+      title,
       content: JSON.stringify(resumeContentObj)
     };
 
-    const userEmail = localStorage.getItem('userEmail') || 'testuser@capgemini.com';
-    
+    const userEmail = getUserEmail();
     const isUpdating = !!existingResume?.id;
-    const endpoint = isUpdating 
-      ? `http://localhost:8082/resume/update/${existingResume.id}`  
-      : 'http://localhost:8082/resume/create';
-    const method = isUpdating ? 'PUT' : 'POST';
-
+    
     try {
-      const response = await fetch(endpoint, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Email': userEmail 
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        setStatusMessage(isUpdating ? 'Resume updated successfully!' : 'Resume saved successfully!');
-        setIsSuccess(true);
-        setTimeout(() => { onSuccessReturn(); }, 1500);
-      } else {
-        setStatusMessage('Failed to save resume. Server rejected the request.');
-        setIsSuccess(false);
-      }
-    } catch (error) {
-      setStatusMessage('Network error. Ensure Resume Service (8082) is running.');
+      await saveResume(payload, userEmail, existingResume?.id);
+      setStatusMessage(isUpdating ? 'Resume updated successfully!' : 'Resume saved successfully!');
+      setIsSuccess(true);
+      setTimeout(() => { onSuccessReturn(); }, 1500);
+    } catch {
+      setStatusMessage('Failed to save resume. Ensure Resume Service (8082) is running.');
       setIsSuccess(false);
     } finally {
       setIsLoading(false);
@@ -87,84 +89,131 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white rounded-2xl shadow-lg border border-gray-100 mt-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-extrabold text-gray-900">
-          {existingResume ? 'Edit Resume' : 'Create New Resume'}
-        </h2>
-        <button onClick={onSuccessReturn} className="text-gray-500 hover:text-gray-800 font-medium">
-          Cancel
-        </button>
+    <div className="mx-auto mt-2 max-w-5xl overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+      <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-950 to-slate-800 px-6 py-6 text-white sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-slate-200">
+              <Sparkles className="h-3.5 w-3.5 text-teal-300" />
+              Resume editor
+            </div>
+            <h2 className="mt-4 font-['Space_Grotesk'] text-3xl font-bold tracking-tight sm:text-4xl">
+              {existingResume ? 'Edit Resume' : 'Create New Resume'}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              Keep the content focused and export-ready. Each section is structured for clean preview and print output.
+            </p>
+          </div>
+          <button onClick={onSuccessReturn} className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15">
+            <X className="h-4 w-4" />
+            Cancel
+          </button>
+        </div>
       </div>
-      
+
       {statusMessage && (
-        <div className={`p-4 mb-6 rounded-lg font-medium ${isSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {statusMessage}
+        <div className={`mx-6 mt-6 rounded-2xl border px-4 py-3 text-sm font-medium sm:mx-8 ${isSuccess ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+          <div className="flex items-center gap-2">
+            {isSuccess ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            <span>{statusMessage}</span>
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* NAYA INPUT FIELD: Full Name */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name (For this Resume)</label>
-          <input 
-            type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)}
-            placeholder="e.g., Virat Kohli"
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900"
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8 sm:py-8">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Full Name</label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g., Virat Kohli"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Resume Title</label>
-          <input 
-            type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Senior Java Developer - Capgemini"
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900"
-          />
-        </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Resume Title</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Senior Java Developer"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Professional Summary</label>
-          <textarea 
-            rows={4} value={summary} onChange={(e) => setSummary(e.target.value)}
-            placeholder="Brief overview of your career and goals..."
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900 resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Technical Skills</label>
-          <textarea 
-            rows={3} value={skills} onChange={(e) => setSkills(e.target.value)}
-            placeholder="Java, Spring Boot, React, MySQL..."
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900 resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Experience</label>
-            <textarea 
-              rows={6} value={experience} onChange={(e) => setExperience(e.target.value)}
-              placeholder="Company Name, Role, Dates, Achievements..."
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900 resize-none"
-            />
+            <div>
+              {/* 👈 MAGIC BUTTON INTEGRATION YAHAN HAI */}
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-sm font-semibold text-slate-700">Professional Summary</label>
+                <button
+                  type="button"
+                  onClick={handleAIGenerate}
+                  disabled={isGeneratingAI || !title}
+                  className="group inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-teal-400 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-sm"
+                >
+                  <Zap className={`h-3 w-3 ${isGeneratingAI ? 'animate-pulse' : 'transition group-hover:scale-110'}`} />
+                  {isGeneratingAI ? 'Generating...' : 'Generate with AI'}
+                </button>
+              </div>
+              <textarea
+                rows={5}
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="Brief overview of your career and goals..."
+                className={`w-full resize-none rounded-2xl border bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 ${isGeneratingAI ? 'border-indigo-300 shadow-inner' : 'border-slate-200'}`}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Education</label>
-            <textarea 
-              rows={6} value={education} onChange={(e) => setEducation(e.target.value)}
-              placeholder="Degree, University, Graduation Year..."
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all text-gray-900 resize-none"
-            />
+
+          <div className="space-y-6 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Technical Skills</label>
+              <textarea
+                rows={5}
+                value={skills}
+                onChange={(e) => setSkills(e.target.value)}
+                placeholder="Java, Spring Boot, React, MySQL..."
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Experience</label>
+                <textarea
+                  rows={8}
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  placeholder="Company Name, Role, Dates, Achievements..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Education</label>
+                <textarea
+                  rows={8}
+                  value={education}
+                  onChange={(e) => setEducation(e.target.value)}
+                  placeholder="Degree, University, Graduation Year..."
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="pt-4">
-          <button 
-            type="submit" disabled={isLoading}
-            className={`w-full font-bold py-4 px-8 rounded-xl transition-all shadow-md text-white ${isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg'}`}
+        <div className="flex flex-col gap-3 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600">Your changes are saved to the resume service when you submit.</p>
+          <button
+            type="submit"
+            disabled={isLoading || isGeneratingAI}
+            className={`inline-flex items-center justify-center rounded-2xl px-6 py-3.5 font-semibold text-white shadow-lg shadow-slate-950/15 transition ${isLoading || isGeneratingAI ? 'cursor-not-allowed bg-indigo-400' : 'bg-slate-950 hover:-translate-y-0.5 hover:bg-indigo-600'}`}
           >
             {isLoading ? 'Saving...' : (existingResume ? 'Update Resume' : 'Save Resume')}
           </button>

@@ -1,5 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --bg-base: #f6f3ee;
+  --bg-soft: #ede7dc;
+  --text-main: #101828;
+  --text-muted: #667085;
+  --brand: #5b5cff;
+  --brand-strong: #4338ca;
+  --accent: #0f766e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(91, 92, 255, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 24%),
+    linear-gradient(180deg, #faf7f1 0%, #f3ede4 100%);
+}
+
 body {
-  background-color: #f3f4f6; /* Halka sa grey background dashboard ke liye */
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text-main);
+  font-family: 'Manrope', sans-serif;
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(91, 92, 255, 0.18);
+  color: var(--text-main);
 }
