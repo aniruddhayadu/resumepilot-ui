@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { saveResume } from '../services/resumeService';
-import { generateSummaryWithAI } from '../services/aiService'; // 👈 Naya Import
+import { generateSummaryWithAI } from '../services/aiService'; 
 import type { Resume, ResumePayload } from '../types/resume';
 import { getUserEmail } from '../utils/storage';
-import { CheckCircle2, Sparkles, X, Zap } from 'lucide-react'; // 👈 Zap icon for AI speed
+import { CheckCircle2, Sparkles, X, Zap } from 'lucide-react'; 
 
 interface ResumeBuilderProps {
   existingResume?: Resume | null;
@@ -13,6 +13,11 @@ interface ResumeBuilderProps {
 const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccessReturn }) => {
   const [fullName, setFullName] = useState('');
   const [title, setTitle] = useState('');
+  // New States
+  const [phone, setPhone] = useState('');
+  const [linkedin, setLinkedin] = useState('');
+  const [github, setGithub] = useState('');
+  
   const [summary, setSummary] = useState('');
   const [skills, setSkills] = useState('');
   const [experience, setExperience] = useState('');
@@ -22,13 +27,16 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
   const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // 👈 AI Loading State
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   useEffect(() => {
     if (existingResume) {
       setFullName(existingResume.fullName || '');
       setTitle(existingResume.title || '');
+      // Cast to any to avoid TS errors if types aren't updated yet
+      setPhone((existingResume as any).phone || '');
+      setLinkedin((existingResume as any).linkedin || '');
+      setGithub((existingResume as any).github || '');
       setSummary(existingResume.summary || '');
       setSkills(existingResume.skills || '');
       setExperience(existingResume.experience || '');
@@ -36,7 +44,6 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     }
   }, [existingResume]);
 
-  // 👈 THE AI ENGINE HANDLER
   const handleAIGenerate = async () => {
     if (!title.trim()) {
       setStatusMessage('Please enter a Resume Title first so AI knows what to write!');
@@ -66,7 +73,8 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     setIsLoading(true);
     setStatusMessage('');
 
-    const resumeContentObj = { fullName, summary, skills, experience, education };
+    // Include new fields in the content JSON
+    const resumeContentObj = { fullName, phone, linkedin, github, summary, skills, experience, education };
     const payload: ResumePayload = {
       title,
       content: JSON.stringify(resumeContentObj)
@@ -147,8 +155,41 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
               />
             </div>
 
+            {/* NEW CONTACT FIELDS */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Phone</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 98765..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">LinkedIn</label>
+                <input
+                  type="text"
+                  value={linkedin}
+                  onChange={(e) => setLinkedin(e.target.value)}
+                  placeholder="username"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">GitHub</label>
+                <input
+                  type="text"
+                  value={github}
+                  onChange={(e) => setGithub(e.target.value)}
+                  placeholder="username"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                />
+              </div>
+            </div>
+
             <div>
-              {/* 👈 MAGIC BUTTON INTEGRATION YAHAN HAI */}
               <div className="mb-2 flex items-center justify-between">
                 <label className="block text-sm font-semibold text-slate-700">Professional Summary</label>
                 <button
