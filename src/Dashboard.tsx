@@ -5,7 +5,9 @@ import { deleteResume, fetchUserResumes } from './services/resumeService';
 import { checkAtsScore, extractTextFromPdf } from './services/aiService'; 
 import type { Resume } from './types/resume';
 import { clearSession, getUserEmail, getUserName } from './utils/storage';
-import { Mail, Phone, Link2, Code, Lock, Activity, CheckCircle2, Target, UploadCloud } from 'lucide-react'; 
+import { Mail, Phone, Link2, Code, Lock, Activity, CheckCircle2, Target, UploadCloud, Edit3 } from 'lucide-react'; 
+
+import ResumeWorkspace from './pages/ResumeWorkspace'; 
 
 const Dashboard: React.FC = () => {
   const userName = getUserName();
@@ -14,24 +16,21 @@ const Dashboard: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
   const userRole = localStorage.getItem('userRole') || 'FREE'; 
   
-  const [currentView, setCurrentView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool' | 'workspace'>('dashboard');
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
   
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  // ATS State (Internal)
   const [atsData, setAtsData] = useState<{score: number, feedback: string} | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // ATS State (External Tool)
   const [extJobTitle, setExtJobTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extAtsData, setExtAtsData] = useState<{score: number, feedback: string} | null>(null);
   const [isExtAnalyzing, setIsExtAnalyzing] = useState(false);
   
-  // Drag & Drop State
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -123,7 +122,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Drag & Drop Event Handlers 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
@@ -148,18 +146,23 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 font-sans print:bg-white">
+    <div className="min-h-screen flex bg-gray-50 font-sans print:bg-white overflow-hidden">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col shadow-xl print:hidden shrink-0">
+      <aside className="w-64 bg-gray-900 text-white flex flex-col shadow-xl print:hidden shrink-0 z-50">
         <div className="h-20 flex items-center px-8 border-b border-gray-800">
           <h1 className="text-2xl font-bold text-indigo-400 tracking-wide">ResumePilot</h1>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           <button onClick={() => setCurrentView('dashboard')} className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${currentView === 'dashboard' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
             My Resumes
           </button>
+          
+          <button onClick={() => setCurrentView('workspace')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${currentView === 'workspace' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+            <Edit3 className="w-4 h-4" /> Live Builder <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded ml-auto">NEW</span>
+          </button>
+
           <button onClick={() => { setSelectedResume(null); setCurrentView('create'); }} className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${currentView === 'create' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
-            Create New
+            Create Basic
           </button>
           
           <div className="my-4 border-t border-gray-800 pt-4" />
@@ -175,102 +178,35 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen print:h-auto print:overflow-visible">
-        <header className="h-20 bg-white shadow-sm flex items-center justify-between px-10 flex-shrink-0 print:hidden">
-          <div className="text-gray-500">
-            Overview / <span className="text-gray-900 font-medium capitalize">{currentView.replace('-', ' ')}</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg border-2 border-indigo-200">
-              {userName.charAt(0).toUpperCase()}
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col h-screen relative bg-gray-50 print:h-auto">
+        
+        {currentView !== 'workspace' && (
+          <header className="h-20 bg-white shadow-sm flex items-center justify-between px-10 flex-shrink-0 print:hidden z-10">
+            <div className="text-gray-500">
+              Overview / <span className="text-gray-900 font-medium capitalize">{currentView.replace('-', ' ')}</span>
             </div>
-            <span className="font-semibold text-gray-700">{userName}</span>
-          </div>
-        </header>
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg border-2 border-indigo-200">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <span className="font-semibold text-gray-700">{userName}</span>
+            </div>
+          </header>
+        )}
 
-        <div className="p-10 flex-1 overflow-y-auto print:p-0 print:overflow-visible">
+        <div className={`flex-1 ${currentView === 'workspace' ? 'overflow-hidden' : 'p-10 overflow-y-auto print:p-0'}`}>
+          
+          {currentView === 'workspace' && (
+            <div className="w-full h-full">
+               <ResumeWorkspace />
+            </div>
+          )}
+
           {(currentView === 'create' || currentView === 'edit') && (
             <ResumeBuilder existingResume={currentView === 'edit' ? selectedResume : null} onSuccessReturn={() => setCurrentView('dashboard')} />
           )}
 
-          {/*  STANDALONE ATS CHECKER TOOL  */}
-          {currentView === 'ats-tool' && (
-            <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-              <div className="mb-6">
-                <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-                  <Activity className="w-8 h-8 text-purple-600" /> Standalone ATS Analyzer
-                </h2>
-                <p className="text-gray-500 mt-2 text-lg">Upload any PDF resume here to check its ATS compatibility against a specific job role.</p>
-              </div>
-
-              {extAtsData && (
-                <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
-                  <div className="relative w-24 h-24 shrink-0 flex items-center justify-center rounded-full bg-white shadow-sm border-[6px] border-purple-200">
-                    <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                      <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-purple-100" />
-                      <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" 
-                        strokeDasharray={238} strokeDashoffset={238 - (238 * extAtsData.score) / 100} 
-                        className={`transition-all duration-1000 ${extAtsData.score > 75 ? 'text-emerald-500' : extAtsData.score > 50 ? 'text-amber-500' : 'text-rose-500'}`} />
-                    </svg>
-                    <span className="text-2xl font-black text-slate-800">{extAtsData.score}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-purple-600" /> AI Feedback
-                    </h3>
-                    <p className="mt-2 text-slate-600 text-sm leading-relaxed">{extAtsData.feedback}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Target Job Role</label>
-                  <input type="text" placeholder="e.g., Senior Java Developer" value={extJobTitle} onChange={(e) => setExtJobTitle(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10" />
-                </div>
-                
-                {/*  REAL DRAG & DROP BOX  */}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Resume (PDF)</label>
-                  <div 
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all ${
-                      isDragging ? 'border-purple-600 bg-purple-100 scale-[1.02]' 
-                      : selectedFile ? 'border-purple-500 bg-purple-50' 
-                      : 'border-slate-300 hover:border-purple-400 hover:bg-purple-50/50'
-                    }`}
-                  >
-                    <input 
-                      type="file" 
-                      accept=".pdf" 
-                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                    />
-                    <UploadCloud className={`w-12 h-12 mx-auto mb-3 transition-colors ${
-                      isDragging ? 'text-purple-700' : selectedFile ? 'text-purple-600' : 'text-slate-400'
-                    }`} />
-                    <p className="font-bold text-slate-700 text-lg">
-                      {selectedFile ? selectedFile.name : isDragging ? "Drop PDF Here!" : "Click or drag to upload resume"}
-                    </p>
-                    <p className="text-sm text-slate-500 mt-2">PDF files only (Max 5MB)</p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleExternalATSCheck} disabled={isExtAnalyzing || !extJobTitle || !selectedFile}
-                  className="w-full bg-slate-900 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:bg-slate-900"
-                >
-                  <Activity className={`w-5 h-5 ${isExtAnalyzing ? 'animate-spin' : ''}`} />
-                  {isExtAnalyzing ? 'Extracting & Analyzing AI Score...' : 'Scan Resume'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* PREVIEW VIEW */}
           {currentView === 'preview' && selectedResume && (
              <div className="max-w-4xl mx-auto bg-white p-10 rounded-2xl shadow-lg border border-gray-100 print:shadow-none print:border-none print:p-0 print:max-w-full">
               <div className="flex justify-between items-center mb-6 print:hidden">
@@ -366,7 +302,82 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* DASHBOARD VIEW */}
+          {currentView === 'ats-tool' && (
+            <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+              <div className="mb-6">
+                <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+                  <Activity className="w-8 h-8 text-purple-600" /> Standalone ATS Analyzer
+                </h2>
+                <p className="text-gray-500 mt-2 text-lg">Upload any PDF resume here to check its ATS compatibility against a specific job role.</p>
+              </div>
+
+              {extAtsData && (
+                <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+                  <div className="relative w-24 h-24 shrink-0 flex items-center justify-center rounded-full bg-white shadow-sm border-[6px] border-purple-200">
+                    <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                      <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-purple-100" />
+                      <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" 
+                        strokeDasharray={238} strokeDashoffset={238 - (238 * extAtsData.score) / 100} 
+                        className={`transition-all duration-1000 ${extAtsData.score > 75 ? 'text-emerald-500' : extAtsData.score > 50 ? 'text-amber-500' : 'text-rose-500'}`} />
+                    </svg>
+                    <span className="text-2xl font-black text-slate-800">{extAtsData.score}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-purple-600" /> AI Feedback
+                    </h3>
+                    <p className="mt-2 text-slate-600 text-sm leading-relaxed">{extAtsData.feedback}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Target Job Role</label>
+                  <input type="text" placeholder="e.g., Senior Java Developer" value={extJobTitle} onChange={(e) => setExtJobTitle(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10" />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Resume (PDF)</label>
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all ${
+                      isDragging ? 'border-purple-600 bg-purple-100 scale-[1.02]' 
+                      : selectedFile ? 'border-purple-500 bg-purple-50' 
+                      : 'border-slate-300 hover:border-purple-400 hover:bg-purple-50/50'
+                    }`}
+                  >
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                    />
+                    <UploadCloud className={`w-12 h-12 mx-auto mb-3 transition-colors ${
+                      isDragging ? 'text-purple-700' : selectedFile ? 'text-purple-600' : 'text-slate-400'
+                    }`} />
+                    <p className="font-bold text-slate-700 text-lg">
+                      {selectedFile ? selectedFile.name : isDragging ? "Drop PDF Here!" : "Click or drag to upload resume"}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-2">PDF files only (Max 5MB)</p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleExternalATSCheck} disabled={isExtAnalyzing || !extJobTitle || !selectedFile}
+                  className="w-full bg-slate-900 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:bg-slate-900"
+                >
+                  <Activity className={`w-5 h-5 ${isExtAnalyzing ? 'animate-spin' : ''}`} />
+                  {isExtAnalyzing ? 'Extracting & Analyzing AI Score...' : 'Scan Resume'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 🚀 TERA ORIGINAL DASHBOARD WAPAS AA GAYA 🚀 */}
           {currentView === 'dashboard' && (
             <>
               <div className="mb-8 flex justify-between items-center">
