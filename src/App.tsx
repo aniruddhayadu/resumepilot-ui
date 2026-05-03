@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import Dashboard from './Dashboard'; // 🚀 Wapas aa gaya tera Dashboard!
+import Dashboard from './Dashboard'; 
 import PublicAts from './pages/PublicAts'; 
 import AdminDashboard from './pages/AdminDashboard'; 
+import TemplateGallery from './components/TemplateGallery'; // 🚀 NAYA IMPORT
 import { getGoogleLoginUrl, login, register, forgotPassword } from './api'; 
 import { extractEmailFromToken } from './utils/jwt';
 import { getUserEmail, setAuthSession, storageKeys, clearSession } from './utils/storage';
-import { ArrowRight, FileText, Shield, Sparkles, Target } from 'lucide-react'; 
+import { ArrowRight, Sparkles, Target, LayoutTemplate } from 'lucide-react'; // 🚀 LayoutTemplate icon add kiya
 
 const App: React.FC = () => {
   const [hasToken, setHasToken] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(localStorage.getItem('userRole') || 'USER');
-  const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot' | 'public-ats' | 'admin'>('login');
+  // 🚀 'public-templates' state add kiya
+  const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot' | 'public-ats' | 'admin' | 'public-templates'>('login');
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -94,11 +96,9 @@ const App: React.FC = () => {
         />
       );
     }
-    // 🚀 Purana Dashboard Wapas laga diya
     return <Dashboard />;
   }
 
-  // ... (Baaki tera public ATS aur landing page ka code waisa hi rahega) ...
   if (currentView === 'public-ats') {
     return (
       <div className="relative min-h-screen bg-gray-50">
@@ -110,9 +110,34 @@ const App: React.FC = () => {
     );
   }
 
+  // 🚀 NAYA: Public Template Gallery View (Bina Login Ke)
+  if (currentView === 'public-templates') {
+    return (
+      <div className="relative min-h-screen bg-slate-50 p-8 md:p-16">
+        <button onClick={() => setCurrentView('login')} className="absolute top-6 left-6 flex items-center gap-2 text-indigo-600 font-bold hover:underline bg-white px-4 py-2 rounded-lg shadow-sm">
+          &larr; Back to Login
+        </button>
+        <div className="max-w-6xl mx-auto mt-10">
+          <div className="mb-10 text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 font-['Space_Grotesk']">
+              Professional Resume Templates
+            </h1>
+            <p className="text-lg text-slate-600">
+              ATS-friendly designs engineered to get you hired. Browse our collection.
+            </p>
+          </div>
+          
+          <TemplateGallery 
+              selectedId={0} 
+              onSelect={() => {}} 
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden px-4 py-8 text-slate-900 md:px-6 md:py-10">
-      {/* Tera Hero Section / Login Form yahan waisa ka waisa hi hai jaisa tune bheja tha */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(91,92,255,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.16),_transparent_24%),linear-gradient(180deg,_#fbf8f2_0%,_#f2eadf_100%)]" />
       <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-indigo-400/10 blur-3xl" />
       <div className="absolute -right-16 bottom-8 h-72 w-72 rounded-full bg-teal-400/10 blur-3xl" />
@@ -130,12 +155,17 @@ const App: React.FC = () => {
                 <p className="max-w-xl text-base leading-7 text-slate-300 md:text-lg">Build, preview, and export resumes from one elegant workspace. The experience is tuned for speed, clarity, and a premium feel.</p>
               </div>
             </div>
-            <div className="mt-4 pt-6 border-t border-white/10 flex flex-col gap-3">
-              <p className="text-slate-300 text-sm mb-1">Explore our tools</p>
+            
+            {/* 🚀 NAYA: 2 Buttons on Landing Page */}
+            <div className="mt-4 pt-6 border-t border-white/10 flex flex-col sm:flex-row gap-3">
               <button onClick={() => setCurrentView('public-ats')} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-lg">
-                <Target className="w-5 h-5" /> Use Free AI ATS Scanner
+                <Target className="w-5 h-5" /> Free ATS Scanner
+              </button>
+              <button onClick={() => setCurrentView('public-templates')} className="w-full bg-white text-slate-900 hover:bg-slate-100 font-bold py-3 px-6 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-lg">
+                <LayoutTemplate className="w-5 h-5" /> Browse Templates
               </button>
             </div>
+
           </div>
         </section>
 

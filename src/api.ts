@@ -1,5 +1,3 @@
-// src/api.ts
-
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8081';
 
 export interface LoginRequest {

@@ -1,4 +1,3 @@
-// Pura file replace kar de isse
 const AI_BASE_URL = 'http://localhost:8085/ai';
 
 export const generateSummaryWithAI = async (jobTitle: string): Promise<string> => {

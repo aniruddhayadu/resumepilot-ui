@@ -1,4 +1,3 @@
-// src/services/exportService.ts
 const EXPORT_BASE_URL = import.meta.env.VITE_EXPORT_BASE_URL || 'http://localhost:8083';
 
 interface ExportJobResponse {
@@ -53,7 +52,6 @@ const resolveUserId = (options: ExportRequestOptions): number => {
   return DEFAULT_EXPORT_USER_ID;
 };
 
-// 👇 NAYA UPDATE: templateId parameter add kiya (default 1)
 export const requestResumePdf = async (
   resumeId: number,
   templateId: number = 1,
@@ -79,7 +77,6 @@ export const requestResumePdf = async (
       const response = await fetch(endpoint, {
         method: 'POST',
         headers,
-        // NAYA: templateId ko backend bhejna zaroori hai!
         body: JSON.stringify({ theme: 'professional', templateId: templateId.toString() }),
       });
 
@@ -90,7 +87,6 @@ export const requestResumePdf = async (
 
       const job = await response.json() as ExportJobResponse;
       
-      // Polling Logic: Agar turant mil jaye toh theek, warna wait karega
       if (job.status === 'COMPLETED' && job.fileUrl) return job.fileUrl;
       
       return new Promise((resolve, reject) => {

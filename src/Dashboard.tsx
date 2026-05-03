@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ResumeBuilder from './components/ResumeBuilder'; 
+import TemplateGallery from './components/TemplateGallery'; 
 import { requestResumePdf } from './services/exportService';
 import { deleteResume, fetchUserResumes } from './services/resumeService';
 import { checkAtsScore, extractTextFromPdf } from './services/aiService'; 
 import type { Resume } from './types/resume';
 import { clearSession, getUserEmail, getUserName } from './utils/storage';
-import { Mail, Phone, Link2, Code, Lock, Activity, CheckCircle2, Target, UploadCloud, Edit3 } from 'lucide-react'; 
+import { Mail, Phone, Link2, Code, Lock, Activity, CheckCircle2, Target, UploadCloud, Edit3, Sparkles, Trash2, FileText, LayoutTemplate } from 'lucide-react'; 
 
 import ResumeWorkspace from './pages/ResumeWorkspace'; 
 
@@ -16,7 +17,7 @@ const Dashboard: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
   const userRole = localStorage.getItem('userRole') || 'FREE'; 
   
-  const [currentView, setCurrentView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool' | 'workspace'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool' | 'workspace' | 'templates'>('dashboard');
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
   
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -73,7 +74,7 @@ const Dashboard: React.FC = () => {
 
   const handleEdit = (resume: Resume) => {
     setSelectedResume(resume);
-    setCurrentView('edit');
+    setCurrentView('workspace');
   };
 
   const handleDownloadPDF = async () => {
@@ -157,7 +158,11 @@ const Dashboard: React.FC = () => {
             My Resumes
           </button>
           
-          <button onClick={() => setCurrentView('workspace')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${currentView === 'workspace' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+          <button onClick={() => setCurrentView('templates')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${currentView === 'templates' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+            <LayoutTemplate className="w-4 h-4" /> Template Gallery
+          </button>
+
+          <button onClick={() => { setSelectedResume(null); setCurrentView('workspace'); }} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors ${currentView === 'workspace' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
             <Edit3 className="w-4 h-4" /> Live Builder <span className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded ml-auto">NEW</span>
           </button>
 
@@ -197,9 +202,36 @@ const Dashboard: React.FC = () => {
 
         <div className={`flex-1 ${currentView === 'workspace' ? 'overflow-hidden' : 'p-10 overflow-y-auto print:p-0'}`}>
           
+          {currentView === 'templates' && (
+            <div className="max-w-6xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+              <div className="mb-8">
+                <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+                  <LayoutTemplate className="w-8 h-8 text-indigo-600" /> Template Gallery
+                </h2>
+                <p className="text-gray-500 mt-2 text-lg">Choose a professional design and jump straight into the Live Builder.</p>
+              </div>
+              
+              <TemplateGallery 
+                  selectedId={selectedTemplateId} 
+                  onSelect={(id) => {
+                      setSelectedTemplateId(id);
+                      setSelectedResume(null);
+                      setCurrentView('workspace');
+                  }} 
+              />
+            </div>
+          )}
+
           {currentView === 'workspace' && (
             <div className="w-full h-full">
-               <ResumeWorkspace />
+               <ResumeWorkspace 
+                 existingData={selectedResume} 
+                 templateId={selectedTemplateId} 
+                 onBack={() => {
+                     setCurrentView('dashboard');
+                     setSelectedResume(null);
+                 }} 
+               />
             </div>
           )}
 
@@ -228,27 +260,13 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div className="mb-10 border-b border-t border-slate-200 py-6 print:hidden">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Select Template Style</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button onClick={() => setSelectedTemplateId(1)} className={`p-5 rounded-xl border-2 text-left transition-all ${selectedTemplateId === 1 ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-slate-200 hover:border-indigo-300'}`}>
-                    <div className="font-bold text-slate-800">Basic Formatter</div>
-                    <div className="text-sm text-slate-500 mt-1">Simple plain text design. Clean and minimal.</div>
-                    <span className="inline-block mt-3 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">FREE</span>
-                  </button>
-                  <button onClick={() => {
-                      if (userRole === 'PREMIUM' || userRole === 'ADMIN') setSelectedTemplateId(2);
-                      else alert("Upgrade to Premium to use the Professional ATS format! 🚀");
-                    }}
-                    className={`p-5 rounded-xl border-2 text-left transition-all relative ${selectedTemplateId === 2 ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-slate-200'} ${userRole !== 'PREMIUM' && userRole !== 'ADMIN' ? 'opacity-70 bg-slate-50' : 'hover:border-indigo-300'}`}
-                  >
-                    <div className="font-bold text-slate-800 flex items-center justify-between">
-                      Professional ATS
-                      {(userRole !== 'PREMIUM' && userRole !== 'ADMIN') && <Lock className="w-5 h-5 text-slate-400" />}
-                    </div>
-                    <div className="text-sm text-slate-500 mt-1">Structured lines, icons, and ATS optimized.</div>
-                    <span className="inline-block mt-3 text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-md">PREMIUM</span>
-                  </button>
-                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-indigo-600" /> Switch Current Template
+                </h3>
+                <TemplateGallery 
+                    selectedId={selectedTemplateId} 
+                    onSelect={(id) => setSelectedTemplateId(id)} 
+                />
               </div>
 
               {atsData && (
@@ -377,7 +395,6 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* 🚀 TERA ORIGINAL DASHBOARD WAPAS AA GAYA 🚀 */}
           {currentView === 'dashboard' && (
             <>
               <div className="mb-8 flex justify-between items-center">
@@ -385,9 +402,21 @@ const Dashboard: React.FC = () => {
                   <h2 className="text-3xl font-extrabold text-gray-900">Your Documents</h2>
                   <p className="text-gray-500 mt-2 text-lg">Manage and view your saved resumes.</p>
                 </div>
-                <button onClick={() => { setSelectedResume(null); setCurrentView('create'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors">
-                  + New Resume
-                </button>
+                
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => { setSelectedResume(null); setCurrentView('create'); }} 
+                    className="bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold py-2 px-5 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    Create Basic
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedResume(null); setCurrentView('workspace'); }} 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" /> Live Builder Pro
+                  </button>
+                </div>
               </div>
 
               {isLoading ? (
@@ -404,11 +433,11 @@ const Dashboard: React.FC = () => {
                   {resumes.map((resume) => (
                     <div key={resume.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all relative group flex flex-col h-full">
                       <button onClick={() => handleDelete(resume.id)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors" title="Delete Resume">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <Trash2 className="w-5 h-5" />
                       </button>
                       <div className="flex-1 mt-2">
                         <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                          <FileText className="w-5 h-5" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 truncate pr-6">{resume.title}</h3>
                         <p className="text-gray-500 mt-2 text-sm line-clamp-3">{resume.summary || 'No summary provided.'}</p>
