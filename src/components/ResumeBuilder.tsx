@@ -52,7 +52,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     }
 
     setIsGeneratingAI(true);
-    setStatusMessage('Groq AI is thinking... ⚡');
+    setStatusMessage('AI Soch rhi h time lagega bhaiiiii... ⏳');
     setIsSuccess(true);
 
     try {
@@ -97,15 +97,15 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
   };
 
   return (
-    <div className="mx-auto mt-2 max-w-5xl overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-      <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-950 to-slate-800 px-6 py-6 text-white sm:px-8">
+    <div className="mx-auto mt-2 max-w-5xl overflow-hidden rounded-[1.75rem] border border-white/70 bg-white/85 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+      <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-950 to-slate-800 px-5 py-5 text-white sm:px-6 sm:py-6 md:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-slate-200">
               <Sparkles className="h-3.5 w-3.5 text-teal-300" />
               Resume editor
             </div>
-            <h2 className="mt-4 font-['Space_Grotesk'] text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="mt-4 font-['Space_Grotesk'] text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               {existingResume ? 'Edit Resume' : 'Create New Resume'}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
@@ -128,7 +128,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8 sm:py-8">
+      <form onSubmit={handleSubmit} className="space-y-6 px-5 py-5 sm:px-6 sm:py-6 md:px-8 md:py-8">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-5">
             <div>
@@ -156,7 +156,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
             </div>
 
             {/* NEW CONTACT FIELDS */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Phone</label>
                 <input

@@ -2,16 +2,15 @@ import React, { useEffect, useState } from 'react';
 import Dashboard from './Dashboard'; 
 import PublicAts from './pages/PublicAts'; 
 import AdminDashboard from './pages/AdminDashboard'; 
-import TemplateGallery from './components/TemplateGallery'; // 🚀 NAYA IMPORT
+import TemplateGallery from './components/TemplateGallery';
 import { getGoogleLoginUrl, login, register, forgotPassword } from './api'; 
 import { extractEmailFromToken } from './utils/jwt';
 import { getUserEmail, setAuthSession, storageKeys, clearSession } from './utils/storage';
-import { ArrowRight, Sparkles, Target, LayoutTemplate } from 'lucide-react'; // 🚀 LayoutTemplate icon add kiya
+import { ArrowRight, Sparkles, Target, LayoutTemplate, ShieldCheck } from 'lucide-react';
 
 const App: React.FC = () => {
   const [hasToken, setHasToken] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(localStorage.getItem('userRole') || 'USER');
-  // 🚀 'public-templates' state add kiya
   const [currentView, setCurrentView] = useState<'login' | 'register' | 'forgot' | 'public-ats' | 'admin' | 'public-templates'>('login');
 
   const [fullName, setFullName] = useState('');
@@ -19,29 +18,30 @@ const App: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   
+  const [otp, setOtp] = useState('');
+  const [isOtpView, setIsOtpView] = useState(false);
+
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenFromUrl = params.get('token');
-    const userNameFromUrl = params.get('userName');
-    const storedToken = localStorage.getItem(storageKeys.token);
+    const tkn = params.get('token');
+    const uName = params.get('userName');
+    const storedTkn = localStorage.getItem(storageKeys.token);
     const storedRole = localStorage.getItem('userRole');
 
-    if (tokenFromUrl) {
-      const emailFromToken = extractEmailFromToken(tokenFromUrl) || getUserEmail();
-      setAuthSession(tokenFromUrl, emailFromToken, userNameFromUrl || undefined);
+    if (tkn) {
+      const extEmail = extractEmailFromToken(tkn) || getUserEmail();
+      setAuthSession(tkn, extEmail, uName || undefined);
       window.history.replaceState({}, document.title, "/"); 
-      
-      const role = emailFromToken === 'aniruddha9131@gmail.com' ? 'ADMIN' : 'USER';
+      const role = extEmail === 'aniruddha9131@gmail.com' ? 'ADMIN' : 'USER';
       localStorage.setItem('userRole', role);
       setUserRole(role);
-      
       setHasToken(true);
     } 
-    else if (storedToken) {
+    else if (storedTkn) {
       setHasToken(true);
       if (storedRole) setUserRole(storedRole);
     }
@@ -52,25 +52,44 @@ const App: React.FC = () => {
   const handleManualAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(''); setSuccessMsg(''); setIsLoading(true);
+    
     try {
-      if (currentView === 'login') {
-        const data = await login({ email, password });
-        setAuthSession(data.token, email, data.fullName);
-        const role = data.role || (email === 'aniruddha9131@gmail.com' ? 'ADMIN' : 'USER');
-        localStorage.setItem('userRole', role); setUserRole(role); setHasToken(true);
+      const cleanEmail = email.toLowerCase().trim();
+
+      if (isOtpView) {
+        const res = await fetch('http://localhost:8081/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanEmail, otp })
+        });
+        
+        if (!res.ok) throw new Error(await res.text());
+        
+        setSuccessMsg("Verification Successful! You can now login.");
+        setIsOtpView(false);
+        setCurrentView('login');
+        setOtp('');
+      } 
+      else if (currentView === 'login') {
+        const data = await login({ email: cleanEmail, password });
+        setAuthSession(data.token, cleanEmail, data.fullName);
+        const role = cleanEmail === 'aniruddha9131@gmail.com' ? 'ADMIN' : (data.role || 'USER');
+        localStorage.setItem('userRole', role); 
+        setUserRole(role); 
+        setHasToken(true);
       } 
       else if (currentView === 'register') {
-        const data = await register({ fullName, email, password, phone });
-        setAuthSession(data.token, email, data.fullName);
-        const role = data.role || (email === 'aniruddha9131@gmail.com' ? 'ADMIN' : 'USER');
-        localStorage.setItem('userRole', role); setUserRole(role); setHasToken(true);
+        await register({ fullName, email: cleanEmail, password, phone });
+        setSuccessMsg("OTP sent to your email. Please verify to continue.");
+        setIsOtpView(true);
       }
       else if (currentView === 'forgot') {
-        const responseText = await forgotPassword(email);
-        setSuccessMsg(responseText); setEmail('');
+        const resText = await forgotPassword(cleanEmail);
+        setSuccessMsg(resText);
+        setEmail('');
       }
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to connect to the server.');
+    } catch (err: any) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +100,7 @@ const App: React.FC = () => {
     localStorage.removeItem('userRole');
     setHasToken(false);
     setCurrentView('login');
+    setIsOtpView(false);
   };
 
   if (hasToken) {
@@ -101,8 +121,8 @@ const App: React.FC = () => {
 
   if (currentView === 'public-ats') {
     return (
-      <div className="relative min-h-screen bg-gray-50">
-        <button onClick={() => setCurrentView('login')} className="absolute top-6 left-6 flex items-center gap-2 text-indigo-600 font-bold hover:underline">
+      <div className="relative min-h-screen bg-gray-50 transition-all duration-500">
+        <button onClick={() => setCurrentView('login')} className="absolute top-6 left-6 flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-colors z-50">
           &larr; Back to Login
         </button>
         <PublicAts />
@@ -110,106 +130,123 @@ const App: React.FC = () => {
     );
   }
 
-  // 🚀 NAYA: Public Template Gallery View (Bina Login Ke)
   if (currentView === 'public-templates') {
     return (
-      <div className="relative min-h-screen bg-slate-50 p-8 md:p-16">
-        <button onClick={() => setCurrentView('login')} className="absolute top-6 left-6 flex items-center gap-2 text-indigo-600 font-bold hover:underline bg-white px-4 py-2 rounded-lg shadow-sm">
+      <div className="relative min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-12 lg:py-10 transition-all duration-500">
+        <button onClick={() => setCurrentView('login')} className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-indigo-600 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md sm:absolute sm:left-6 sm:top-6 sm:mb-0 z-50 active:scale-95">
           &larr; Back to Login
         </button>
-        <div className="max-w-6xl mx-auto mt-10">
-          <div className="mb-10 text-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 font-['Space_Grotesk']">
-              Professional Resume Templates
-            </h1>
-            <p className="text-lg text-slate-600">
-              ATS-friendly designs engineered to get you hired. Browse our collection.
-            </p>
+        <div className="mx-auto max-w-6xl pt-2 sm:pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="mb-8 text-center sm:mb-10">
+            <h1 className="font-['Space_Grotesk'] text-3xl font-extrabold text-slate-900 sm:text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">Professional Resume Templates</h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base md:text-lg">ATS-friendly designs engineered to get you hired.</p>
           </div>
-          
-          <TemplateGallery 
-              selectedId={0} 
-              onSelect={() => {}} 
-          />
+          <TemplateGallery selectedId={0} onSelect={() => {}} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 py-8 text-slate-900 md:px-6 md:py-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(91,92,255,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.16),_transparent_24%),linear-gradient(180deg,_#fbf8f2_0%,_#f2eadf_100%)]" />
-      <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-indigo-400/10 blur-3xl" />
-      <div className="absolute -right-16 bottom-8 h-72 w-72 rounded-full bg-teal-400/10 blur-3xl" />
-
-      <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-slate-950/92 p-8 text-white shadow-[0_30px_100px_rgba(15,23,42,0.28)] backdrop-blur-xl md:p-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(91,92,255,0.24),_transparent_36%),radial-gradient(circle_at_bottom_left,_rgba(15,118,110,0.2),_transparent_32%)]" />
-          <div className="relative flex h-full flex-col justify-between gap-10">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm font-medium text-white/80">
-                <Sparkles className="h-4 w-4 text-teal-300" /> Beautiful resumes, one polished workspace
-              </div>
-              <div className="space-y-4">
-                <h1 className="max-w-md font-['Space_Grotesk'] text-4xl leading-[1.02] font-bold tracking-tight md:text-5xl">ResumePilot AI turns your profile into a sharp, modern story.</h1>
-                <p className="max-w-xl text-base leading-7 text-slate-300 md:text-lg">Build, preview, and export resumes from one elegant workspace. The experience is tuned for speed, clarity, and a premium feel.</p>
-              </div>
+    <div className="relative min-h-screen overflow-hidden px-4 py-8 text-slate-900 md:px-6 md:py-10 bg-slate-50">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(91,92,255,0.12),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(15,118,110,0.1),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_100%)]" />
+      
+      <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
+        
+        <section className="relative flex h-full flex-col justify-between overflow-hidden rounded-[2rem] border border-slate-800/80 bg-slate-950 p-6 text-white shadow-2xl sm:p-8 md:p-10 transition-all duration-700 hover:shadow-indigo-500/10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.15),_transparent_50%),radial-gradient(ellipse_at_bottom_left,_rgba(20,184,166,0.15),_transparent_50%)]" />
+          <div className="relative space-y-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 backdrop-blur-md">
+              <Sparkles className="h-4 w-4 text-indigo-400" /> Beautiful resumes, one polished workspace
             </div>
-            
-            {/* 🚀 NAYA: 2 Buttons on Landing Page */}
-            <div className="mt-4 pt-6 border-t border-white/10 flex flex-col sm:flex-row gap-3">
-              <button onClick={() => setCurrentView('public-ats')} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-lg">
-                <Target className="w-5 h-5" /> Free ATS Scanner
-              </button>
-              <button onClick={() => setCurrentView('public-templates')} className="w-full bg-white text-slate-900 hover:bg-slate-100 font-bold py-3 px-6 rounded-xl flex justify-center items-center gap-2 transition-colors shadow-lg">
-                <LayoutTemplate className="w-5 h-5" /> Browse Templates
-              </button>
+            <div className="space-y-5">
+              <h1 className="max-w-md font-['Space_Grotesk'] text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400">
+                ResumePilot AI turns your profile into a sharp, modern story.
+              </h1>
+              <p className="max-w-xl text-base leading-relaxed text-slate-400">
+                Build, preview, and export resumes from one elegant workspace. The experience is tuned for speed, clarity, and a premium feel.
+              </p>
             </div>
-
+          </div>
+          
+          <div className="relative mt-8 flex flex-col gap-4 border-t border-white/10 pt-8 sm:flex-row">
+            <button onClick={() => setCurrentView('public-ats')} className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-6 py-3.5 font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] hover:shadow-indigo-500/40 active:scale-95">
+              <Target className="w-5 h-5 transition-transform group-hover:rotate-12" /> Free ATS Scanner
+            </button>
+            <button onClick={() => setCurrentView('public-templates')} className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 px-6 py-3.5 font-bold text-white border border-white/10 backdrop-blur-sm shadow-lg transition-all hover:bg-white/10 hover:scale-[1.02] active:scale-95">
+              <LayoutTemplate className="w-5 h-5 text-slate-300 transition-transform group-hover:-rotate-12" /> Browse Templates
+            </button>
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/78 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl md:p-8">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-teal-500 to-amber-400" />
-          <div className="mb-8 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">ResumePilot</p>
-              <h2 className="mt-2 font-['Space_Grotesk'] text-3xl font-bold text-slate-950">
-                {currentView === 'login' ? 'Welcome back' : currentView === 'register' ? 'Create your account' : 'Reset Password'}
-              </h2>
-            </div>
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-2xl shadow-slate-200/50 backdrop-blur-2xl sm:p-8 md:p-10 transition-all duration-500">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-teal-400 opacity-90" />
+          
+          <div className="mb-8">
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-indigo-500">ResumePilot</p>
+            <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-extrabold text-slate-900 sm:text-3xl">
+              {isOtpView ? 'Verify Your Email' : (currentView === 'login' ? 'Welcome back' : currentView === 'register' ? 'Create an account' : 'Reset Password')}
+            </h2>
           </div>
 
-          {errorMsg && <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">{errorMsg}</div>}
-          {successMsg && <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">{successMsg}</div>}
+          {errorMsg && <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm animate-in fade-in slide-in-from-top-2">{errorMsg}</div>}
+          {successMsg && <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm font-medium text-emerald-700 shadow-sm animate-in fade-in slide-in-from-top-2">{successMsg}</div>}
 
-          <form onSubmit={handleManualAuth} className="space-y-4 text-left">
-            {currentView === 'register' && (
+          <form onSubmit={handleManualAuth} className="space-y-5 animate-in fade-in duration-700">
+            {isOtpView ? (
+              <div className="space-y-5 animate-in slide-in-from-bottom-4">
+                <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50 flex items-start gap-3">
+                    <ShieldCheck className="text-indigo-500 h-5 w-5 mt-0.5 shrink-0" />
+                    <p className="text-sm text-indigo-900 leading-relaxed">We've sent a 6-digit secure code to <span className="font-bold">{email}</span>. Enter it below to verify.</p>
+                </div>
+                <div>
+                  <input type="text" required maxLength={6} value={otp} onChange={e => setOtp(e.target.value)} placeholder="000000" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-4 text-center text-3xl font-mono font-bold tracking-[0.5em] text-slate-900 shadow-sm outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15" />
+                </div>
+                <button type="submit" disabled={isLoading} className="w-full bg-slate-900 py-4 rounded-xl text-white font-bold shadow-lg transition-all hover:bg-indigo-600 hover:shadow-indigo-500/25 active:scale-95 disabled:opacity-70">
+                    {isLoading ? 'Verifying...' : 'Verify & Activate Account'}
+                </button>
+                <button type="button" onClick={() => setIsOtpView(false)} className="w-full text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900">Change email address</button>
+              </div>
+            ) : (
               <>
-                <div><label className="mb-2 block text-sm font-semibold text-slate-700">Full Name</label><input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
-                <div><label className="mb-2 block text-sm font-semibold text-slate-700">Phone Number</label><input type="text" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="10 digits" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
+                {currentView === 'register' && (
+                  <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                    <div><label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Full Name</label><input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
+                    <div><label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Phone</label><input type="text" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
+                  </div>
+                )}
+                <div><label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Email Address</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
+                {currentView !== 'forgot' && (
+                  <div><label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Password</label><input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-slate-900 shadow-sm outline-none transition-all focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
+                )}
+                {currentView === 'login' && (
+                  <div className="text-right mt-2"><button type="button" onClick={() => setCurrentView('forgot')} className="text-sm font-bold text-indigo-600 transition-colors hover:text-indigo-800">Forgot Password?</button></div>
+                )}
+                <button type="submit" disabled={isLoading} className="group mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-4 font-bold text-white shadow-lg transition-all hover:bg-indigo-600 hover:shadow-indigo-500/25 active:scale-95 disabled:opacity-70">
+                  {isLoading ? 'Processing...' : (currentView === 'login' ? 'Sign In to Workspace' : currentView === 'register' ? 'Create Account' : 'Send Reset Link')}
+                  {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+                </button>
               </>
             )}
-            <div><label className="mb-2 block text-sm font-semibold text-slate-700">Email</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
-            {currentView !== 'forgot' && (
-              <div><label className="mb-2 block text-sm font-semibold text-slate-700">Password</label><input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder={currentView === 'login' ? '••••••••' : 'Min 8 chars, 1 special'} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10" /></div>
-            )}
-            {currentView === 'login' && (
-              <div className="text-right mt-1"><button type="button" onClick={() => { setCurrentView('forgot'); setErrorMsg(''); setSuccessMsg(''); }} className="text-sm font-semibold text-indigo-600 hover:underline">Forgot Password?</button></div>
-            )}
-            <button type="submit" disabled={isLoading} className="group mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3.5 font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.2)] transition hover:-translate-y-0.5 hover:bg-indigo-600 disabled:opacity-70">
-              {isLoading ? 'Processing...' : (currentView === 'login' ? 'Sign In' : currentView === 'register' ? 'Create Account' : 'Send Reset Link')}
-              {!isLoading && <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />}
-            </button>
           </form>
-          {currentView !== 'forgot' && (
-            <button onClick={handleGoogleLogin} className="mt-4 flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"><img src="https://www.svgrepo.com/show/475656/google-color.svg" className="mr-3 h-5 w-5" alt="Google" />Continue with Google</button>
+
+          {!isOtpView && currentView !== 'forgot' && (
+            <>
+              <div className="my-7 flex items-center gap-4 text-slate-300"><div className="h-[1px] flex-1 bg-slate-200" /><span className="text-xs font-bold uppercase tracking-wider">OR</span><div className="h-[1px] flex-1 bg-slate-200" /></div>
+              <button onClick={handleGoogleLogin} className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3.5 font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md active:scale-95">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="mr-3 h-5 w-5" alt="Google" /> Continue with Google
+              </button>
+            </>
           )}
-          <p className="mt-6 text-center text-sm text-slate-600">
-            <button type="button" onClick={() => { setCurrentView(currentView === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }} className="font-semibold text-indigo-600 transition hover:text-indigo-700">
-              {currentView === 'login' ? 'Sign Up Instead' : 'Log In Instead'}
-            </button>
-          </p>
+
+          {!isOtpView && (
+            <p className="mt-8 text-center text-sm font-medium text-slate-600">
+              {currentView === 'login' ? "Don't have an account? " : "Already have an account? "}
+              <button type="button" onClick={() => { setCurrentView(currentView === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }} className="font-bold text-indigo-600 transition-colors hover:text-indigo-800 hover:underline underline-offset-2">
+                {currentView === 'login' ? 'Sign Up' : 'Log In'}
+              </button>
+            </p>
+          )}
         </section>
       </div>
     </div>

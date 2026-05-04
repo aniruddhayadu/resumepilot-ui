@@ -96,17 +96,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex bg-[#f4f7f6] font-sans">
+    <div className="min-h-screen flex flex-col bg-[#f4f7f6] font-sans lg:flex-row">
       
       {/* SIDEBAR */}
-      <aside className="w-72 bg-[#0f172a] text-white flex flex-col justify-between shrink-0 shadow-xl border-r border-slate-800">
+      <aside className="flex shrink-0 flex-col justify-between border-r border-slate-800 bg-[#0f172a] text-white shadow-xl lg:w-72">
         <div>
-          <div className="p-8">
+          <div className="p-5 sm:p-8">
             <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Admin Portal</span>
-            <h1 className="text-3xl font-bold mt-4 leading-tight text-white">ResumePilot <span className="text-indigo-400">Control</span></h1>
+            <h1 className="mt-4 text-2xl font-bold leading-tight text-white sm:text-3xl">ResumePilot <span className="text-indigo-400">Control</span></h1>
             <p className="text-slate-400 mt-2 text-sm break-all">{adminEmail}</p>
           </div>
-          <nav className="px-6 space-y-3 mt-4">
+          <nav className="mt-2 flex gap-3 overflow-x-auto px-4 pb-4 sm:px-6 lg:block lg:space-y-3 lg:overflow-visible lg:pb-0">
             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-4 rounded-xl font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}>
               <LayoutDashboard className="w-5 h-5" /> Overview
             </button>
@@ -115,20 +115,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
           </nav>
         </div>
-        <div className="p-6 space-y-3">
+        <div className="space-y-3 p-4 sm:p-6">
           <button onClick={onSwitchToUser} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-3.5 rounded-xl flex justify-center items-center gap-2"><Monitor className="w-4 h-4" /> Go to Workspace</button>
           <button onClick={onLogout} className="w-full bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold py-3.5 rounded-xl flex justify-center items-center gap-2"><LogOut className="w-4 h-4" /> Secure Logout</button>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-10 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
         {activeTab === 'dashboard' ? (
           <div className="max-w-6xl mx-auto space-y-8">
-            <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 rounded-[2rem] p-10 text-white shadow-lg relative overflow-hidden">
-              <Activity className="absolute right-0 top-0 opacity-10 w-64 h-64 -mt-10 -mr-10 pointer-events-none" />
+            <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-6 text-white shadow-lg sm:p-8 lg:p-10">
+              <Activity className="pointer-events-none absolute right-0 top-0 -mr-10 -mt-10 h-44 w-44 opacity-10 sm:h-56 sm:w-56 lg:h-64 lg:w-64" />
               <p className="text-indigo-300 text-sm font-bold uppercase tracking-widest mb-2">Live Telemetry</p>
-              <h2 className="text-3xl font-extrabold leading-tight max-w-2xl relative z-10">Monitor platform usage in real-time.</h2>
+              <h2 className="relative z-10 max-w-2xl text-2xl font-extrabold leading-tight sm:text-3xl">Monitor platform usage in real-time.</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard icon={<Users className="w-6 h-6 text-blue-500" />} title="Registered Users" value={loadingStats ? "..." : stats.totalUsers} trend="Live from DB" />
@@ -139,8 +139,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         ) : (
           <div className="max-w-6xl mx-auto">
-             <h2 className="text-3xl font-bold text-slate-800 mb-6">User Directory</h2>
-             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+             <h2 className="mb-4 text-2xl font-bold text-slate-800 sm:mb-6 sm:text-3xl">User Directory</h2>
+             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 {loadingUsers ? (
                   <div className="p-12 text-center text-slate-500"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div><p>Loading database...</p></div>
                 ) : usersList.length === 0 ? (
@@ -149,7 +149,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider border-b">
+                        <tr className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500 sm:text-sm">
                           <th className="px-6 py-4">ID</th>
                           <th className="px-6 py-4">Full Name</th>
                           <th className="px-6 py-4">Email</th>
@@ -194,7 +194,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 };
 
 const StatCard = ({ icon, title, value, trend }: any) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between min-h-[160px]">
+  <div className="flex min-h-[160px] flex-col justify-between rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
     <div className="flex justify-between items-start mb-4"><div className="p-3 bg-slate-50 rounded-xl">{icon}</div><span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{trend}</span></div>
     <div><p className="text-4xl font-black text-slate-800 mb-1">{value}</p><h3 className="text-slate-500 font-medium text-sm">{title}</h3></div>
   </div>

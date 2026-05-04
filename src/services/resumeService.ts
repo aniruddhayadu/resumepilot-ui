@@ -1,89 +1,69 @@
-import type { RawResume, Resume, ResumeContent, ResumePayload } from '../types/resume';
+export interface Resume {
+  id: number;
+  title: string;
+  fullName?: string;
+  templateId?: number;
+  summary: string;
+  skills: string;
+  experience: string;
+  education: string;
+  content?: string; 
+}
 
-const RESUME_BASE_URL = import.meta.env.VITE_RESUME_BASE_URL || '';
+export interface ResumePayload {
+  title: string;
+  content: string;
+}
 
-const parseResumeContent = (content?: string): ResumeContent => {
-  if (!content) {
-    return {
-      fullName: '',
-      summary: '',
-      skills: '',
-      experience: '',
-      education: '',
-    };
-  }
+const BASE_URL = import.meta.env.VITE_RESUME_BASE_URL || 'http://localhost:8082';
 
-  try {
-    return JSON.parse(content) as ResumeContent;
-  } catch {
-    return {
-      fullName: '',
-      summary: '',
-      skills: '',
-      experience: '',
-      education: '',
-    };
-  }
-};
-
-export const fetchUserResumes = async (userEmail: string, fallbackName: string): Promise<Resume[]> => {
-  const response = await fetch(`${RESUME_BASE_URL}/resume/my-resumes`, {
+export const fetchUserResumes = async (email: string, fallback: string): Promise<Resume[]> => {
+  const res = await fetch(`${BASE_URL}/resume/my-resumes`, {
     method: 'GET',
-    headers: { 'User-Email': userEmail },
+    headers: { 'User-Email': email },
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch resumes. Server returned an error.');
-  }
+  if (!res.ok) throw new Error('Fetch failed');
 
-  const rawData = (await response.json()) as RawResume[];
+  const raw = await res.json();
 
-  return rawData.map((resume) => {
-    const content = parseResumeContent(resume.content);
+  return raw.map((r: any) => {
+    let pContent: any = {};
+    try {
+        if (r.content) pContent = JSON.parse(r.content);
+    } catch (e) {}
+
     return {
-      id: resume.id,
-      title: resume.title,
-      fullName: content.fullName || fallbackName,
-      summary: content.summary,
-      skills: content.skills,
-      experience: content.experience,
-      education: content.education,
+      id: r.id,
+      title: r.title,
+      fullName: pContent.fullName || fallback,
+      templateId: Number(pContent.templateId) || 1,
+      summary: pContent.summary || pContent.objective || '',
+      skills: pContent.skills || '',
+      experience: pContent.experience || '',
+      education: pContent.education || '',
+      content: r.content 
     };
   });
 };
 
-export const deleteResume = async (id: number, userEmail: string): Promise<void> => {
-  const response = await fetch(`${RESUME_BASE_URL}/resume/delete/${id}`, {
+export const deleteResume = async (id: number, email: string): Promise<void> => {
+  const res = await fetch(`${BASE_URL}/resume/delete/${id}`, {
     method: 'DELETE',
-    headers: { 'User-Email': userEmail },
+    headers: { 'User-Email': email },
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Server Error ${response.status}: ${errorText}`);
-  }
+  if (!res.ok) throw new Error(`Error ${res.status}`);
 };
 
-export const saveResume = async (
-  payload: ResumePayload,
-  userEmail: string,
-  resumeId?: number,
-): Promise<void> => {
-  const isUpdate = Boolean(resumeId);
-  const endpoint = isUpdate
-    ? `${RESUME_BASE_URL}/resume/update/${resumeId}`
-    : `${RESUME_BASE_URL}/resume/create`;
-
-  const response = await fetch(endpoint, {
-    method: isUpdate ? 'PUT' : 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Email': userEmail,
-    },
+export const saveResume = async (payload: ResumePayload, email: string, id?: number): Promise<void> => {
+  const isUpd = Boolean(id);
+  const url = isUpd ? `${BASE_URL}/resume/update/${id}` : `${BASE_URL}/resume/create`;
+  
+  const res = await fetch(url, {
+    method: isUpd ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Email': email },
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to save resume. Server rejected the request.');
-  }
+  if (!res.ok) throw new Error('Save failed');
 };
