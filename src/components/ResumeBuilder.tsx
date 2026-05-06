@@ -60,8 +60,8 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
       setSummary(generatedText);
       setStatusMessage('AI Summary generated successfully! ✨');
       setIsSuccess(true);
-    } catch {
-      setStatusMessage('Failed to connect to AI Service. Ensure port 8085 is running.');
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Failed to connect to AI Service.');
       setIsSuccess(false);
     } finally {
       setIsGeneratingAI(false);

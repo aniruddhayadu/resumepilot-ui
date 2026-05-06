@@ -190,8 +190,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     try {
       const generatedText = await generateSummaryWithAI(resumeData.title);
       setResumeData({ ...resumeData, objective: generatedText });
-    } catch {
-      alert('Failed to connect to AI Service. Ensure port 8085 is running.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to connect to AI Service.');
     } finally {
       setIsGeneratingAI(false);
     }

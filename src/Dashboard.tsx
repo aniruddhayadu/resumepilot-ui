@@ -129,8 +129,8 @@ const Dashboard: React.FC = () => {
     try {
       const res = await checkAtsScore(selRes.title || 'Professional', text);
       setAtsData(res);
-    } catch {
-      alert("ATS failed.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "ATS failed.");
     } finally {
       setAnalyzing(false);
     }
@@ -144,8 +144,8 @@ const Dashboard: React.FC = () => {
       const text = await extractTextFromPdf(selFile);
       const res = await checkAtsScore(extJob, text);
       setExtAts(res);
-    } catch {
-      alert("Analysis failed.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Analysis failed.");
     } finally {
       setExtAnalyzing(false);
     }

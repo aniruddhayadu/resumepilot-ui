@@ -1,10 +1,10 @@
-const AI_BASE_URL = 'http://localhost:8085/ai';
+const AI_BASE_URL = (import.meta.env.VITE_AI_BASE_URL || '/ai').replace(/\/$/, '');
 
 const getAiHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
   'User-Email': localStorage.getItem('userEmail') || '',
   'User-Role': localStorage.getItem('userRole') || 'FREE',
-  'Subscription-Plan': localStorage.getItem('subscriptionPlan') || localStorage.getItem('userRole') || 'FREE',
+  'Subscription-Plan': localStorage.getItem('subscriptionPlan') || 'FREE',
 });
 
 const getAiErrorMessage = async (response: Response): Promise<string> => {
@@ -29,7 +29,9 @@ export const generateSummaryWithAI = async (jobTitle: string): Promise<string> =
   });
   if (!response.ok) throw new Error(await getAiErrorMessage(response));
   const data = await response.json();
-  return data.generatedSummary;
+  const generatedSummary = typeof data?.generatedSummary === 'string' ? data.generatedSummary.trim() : '';
+  if (!generatedSummary) throw new Error('AI returned an empty summary');
+  return generatedSummary;
 };
 
 export const checkAtsScore = async (jobTitle: string, resumeContent: string): Promise<{score: number, feedback: string}> => {
@@ -43,7 +45,11 @@ export const checkAtsScore = async (jobTitle: string, resumeContent: string): Pr
   
   const textResponse = await response.text();
   try {
-    return JSON.parse(textResponse); 
+    const data = JSON.parse(textResponse);
+    return {
+      score: Number(data?.score ?? 0),
+      feedback: typeof data?.feedback === 'string' ? data.feedback : 'No feedback returned.',
+    };
   } catch {
     throw new Error('AI returned invalid format');
   }
@@ -58,7 +64,7 @@ export const extractTextFromPdf = async (file: File): Promise<string> => {
     body: formData,
   });
   
-  if (!response.ok) throw new Error('Failed to extract text from PDF');
+  if (!response.ok) throw new Error(await getAiErrorMessage(response));
   
   const data = await response.json();
   if (data.error) throw new Error(data.error);
