@@ -60,7 +60,7 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
                             
                             alert("Payment Success! 🚀 Template Unlocked. ID: " + res.razorpay_payment_id);
                             onSelect(t.id); 
-                        } catch (err) {
+                        } catch {
                             alert("Payment successful, but verification failed.");
                         }
                     }

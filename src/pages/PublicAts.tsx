@@ -20,7 +20,7 @@ const PublicAts: React.FC = () => {
       const extractedText = await extractTextFromPdf(selectedFile);
       const result = await checkAtsScore(extJobTitle, extractedText);
       setExtAtsData(result);
-    } catch (err) {
+    } catch {
       alert("Analysis failed. Ensure AI Service is running.");
     } finally {
       setIsExtAnalyzing(false);

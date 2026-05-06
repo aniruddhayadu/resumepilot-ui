@@ -33,7 +33,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           const data = await response.json();
           setStats(data);
         }
-      } catch (error) {
+      } catch {
         console.log("Stats fetch failed");
       } finally {
         setLoadingStats(false);

@@ -1,4 +1,11 @@
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || '';
+const GOOGLE_AUTH_BASE_URL = import.meta.env.VITE_GOOGLE_AUTH_BASE_URL || '';
+const AUTH_BASE_URLS = Array.from(new Set([
+  AUTH_BASE_URL,
+  'http://localhost:8080',
+  'http://localhost:8081',
+  '', // Last fallback: relative path via Vite proxy
+].filter((url) => url !== undefined && url !== null)));
 
 export interface LoginRequest {
   email: string;
@@ -13,42 +20,65 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  token: string;
+  token?: string;
   fullName?: string;
   message?: string;
 }
 
-export const login = async (payload: LoginRequest): Promise<AuthResponse> => {
-  const response = await fetch(`${AUTH_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+const normalizeToken = (data: any): string => {
+  const rawToken = data?.token || data?.accessToken || data?.jwt || data?.tokenValue || '';
+  const cleanedToken = typeof rawToken === 'string' ? rawToken.replace(/^Bearer\s+/i, '').trim() : '';
+  if (!cleanedToken) {
+    throw new Error(data?.message || 'Authentication failed. No token was returned by the server.');
+  }
+  return cleanedToken;
+};
 
-  const data = await response.json();
+const normalizeAuthResponse = (data: any): AuthResponse => ({
+  ...data,
+  token: normalizeToken(data),
+});
 
-  if (!response.ok) {
-    throw new Error(data.message || 'Authentication failed. Please try again.');
+const requestJson = async (path: string, payload: unknown): Promise<any> => {
+  let lastError: unknown = null;
+
+  for (const baseUrl of AUTH_BASE_URLS) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await response.json()
+        : { message: (await response.text()).slice(0, 500) || `Request failed at ${baseUrl}${path}` };
+
+      if (response.ok) return data;
+
+      if (![404, 405].includes(response.status) && response.status < 500) {
+        throw new Error(data?.message || 'Authentication failed. Please try again.');
+      }
+
+      lastError = new Error(data?.message || `Auth service unavailable at ${baseUrl}`);
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  return data;
+  throw lastError instanceof Error ? lastError : new Error('Authentication service is unavailable.');
+};
+
+export const login = async (payload: LoginRequest): Promise<AuthResponse> => {
+  return normalizeAuthResponse(await requestJson('/auth/login', payload));
 };
 
 export const register = async (payload: RegisterRequest): Promise<AuthResponse> => {
-  const response = await fetch(`${AUTH_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Authentication failed. Please try again.');
-  }
-
-  return data;
+  return await requestJson('/auth/register', payload);
 };
 
-export const getGoogleLoginUrl = (): string =>
-  `${AUTH_BASE_URL}/oauth2/authorization/google`;
+export const getGoogleLoginUrl = (): string => {
+  const baseUrl = GOOGLE_AUTH_BASE_URL || AUTH_BASE_URL || 'http://localhost:8080';
+  return `${baseUrl}/oauth2/authorization/google`;
+};

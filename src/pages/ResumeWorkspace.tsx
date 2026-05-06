@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Layout, Download, FileText, Save, Loader2, CheckCircle2, Trash2, Zap, Moon, Sun, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { getUserEmail } from '../utils/storage';
 import { generateSummaryWithAI } from '../services/aiService';
@@ -42,7 +42,7 @@ type AutoSaveMode = 'off' | 'normal' | 'fast';
 
 const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templateId = 1, onBack }) => {
 
-  const defaultData: ResumeData = {
+  const defaultData: ResumeData = useMemo(() => ({
     title: 'Java Developer', 
     fullName: 'Aniruddha Yaduwanshi',
     email: 'aniruddha9131@gmail.com',
@@ -66,7 +66,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     achievements: '• Maintained an exceptional 600+ day problem-solving streak on CodeChef, successfully conquering over 800 complex algorithmic challenges.\n• Solved 250+ advanced DSA problems on LeetCode, consistently optimizing for minimal time and space complexities.',
     certifications: '• Microsoft Azure Fundamentals (AZ-900) - Microsoft\n• Certified System Administrator - ServiceNow\n• Java Full Stack Development - Talent Next (Wipro)',
     extracurricular: '• Actively preparing for JLPT N5 (Japanese Language Proficiency Test).\n• NSS Member (2022-2024), demonstrating community engagement, leadership, and cross-functional teamwork.'
-  };
+  }), []);
 
   const [resumeData, setResumeData] = useState<ResumeData>(defaultData);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +87,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
   const historyRef = useRef<Array<{ resumeData: ResumeData; activeTemplateId: number }>>([]);
   const redoHistoryRef = useRef<Array<{ resumeData: ResumeData; activeTemplateId: number }>>([]);
   const previousSnapshotRef = useRef<{ resumeData: ResumeData; activeTemplateId: number } | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('resume_workspace_theme', isDarkMode ? 'dark' : 'light');
@@ -100,7 +102,10 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     isDirtyTrackingInitialized.current = false;
     isApplyingHistoryRef.current = false;
     historyRef.current = [];
+    redoHistoryRef.current = [];
     previousSnapshotRef.current = null;
+    setCanUndo(false);
+    setCanRedo(false);
 
     if (existingData) {
       setResumeId(existingData.id);
@@ -128,7 +133,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
       setHasPendingChanges(false);
       setSaveError(null);
     }
-  }, [existingData, templateId]);
+  }, [defaultData, existingData, templateId]);
 
   useEffect(() => {
     if (!isDirtyTrackingInitialized.current) {
@@ -148,7 +153,10 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
       if (historyRef.current.length > 30) historyRef.current.shift();
     }
 
+    redoHistoryRef.current = [];
     previousSnapshotRef.current = { resumeData, activeTemplateId };
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(false);
     setHasPendingChanges(true);
   }, [resumeData, activeTemplateId]);
 
@@ -182,7 +190,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     try {
       const generatedText = await generateSummaryWithAI(resumeData.title);
       setResumeData({ ...resumeData, objective: generatedText });
-    } catch (err) {
+    } catch {
       alert('Failed to connect to AI Service. Ensure port 8085 is running.');
     } finally {
       setIsGeneratingAI(false);
@@ -199,6 +207,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     isApplyingHistoryRef.current = true;
     setResumeData(previous.resumeData);
     setActiveTemplateId(previous.activeTemplateId);
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(redoHistoryRef.current.length > 0);
     setHasPendingChanges(true);
   };
 
@@ -212,6 +222,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     isApplyingHistoryRef.current = true;
     setResumeData(next.resumeData);
     setActiveTemplateId(next.activeTemplateId);
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(redoHistoryRef.current.length > 0);
     setHasPendingChanges(true);
   };
 
@@ -269,7 +281,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     window.print();
   };
 
-  const handleSave = async (options?: { silent?: boolean }) => {
+  const handleSave = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
     if (!silent) setIsSaving(true);
     try {
@@ -287,7 +299,12 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
           'User-Email': getUserEmail()
         },
         body: JSON.stringify({
-          title: resumeData.title || 'My Tagda Resume',
+          title: (() => {
+            const currentTitle = resumeData.title.trim();
+            if (currentTitle && currentTitle.toLowerCase() !== 'java developer') return currentTitle;
+            const jobTag = resumeData.objective.trim().split(/\s+/).slice(0, 3).join(' ') || resumeData.fullName.trim().split(/\s+/).slice(0, 2).join(' ') || 'Resume';
+            return `Resume_${jobTag.replace(/[^a-zA-Z0-9]+/g, '_')}_${new Date().toISOString().slice(0, 10)}`;
+          })(),
           content: JSON.stringify({ ...resumeData, templateId: activeTemplateId, summary: resumeData.objective || 'Professional Resume' })
         })
       });
@@ -324,7 +341,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     } finally {
       if (!silent) setIsSaving(false);
     }
-  };
+  }, [activeTemplateId, resumeData, resumeId]);
 
   useEffect(() => {
     if (autoSaveMode === 'off' || !hasPendingChanges || isSaving || isGeneratingAI) return;
@@ -332,7 +349,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
       handleSave({ silent: true });
     }, autoSaveMode === 'fast' ? 700 : 1600);
     return () => window.clearTimeout(timer);
-  }, [autoSaveMode, hasPendingChanges, isSaving, isGeneratingAI, resumeData, activeTemplateId]);
+  }, [autoSaveMode, hasPendingChanges, isSaving, isGeneratingAI, handleSave]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -353,7 +370,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleSave]);
 
   useEffect(() => {
     const autoRecoverKey = `resumepilot_autorecover_${resumeId || 'new'}`;
@@ -704,15 +721,15 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
             </button>
             <button
               onClick={handleUndo}
-              disabled={historyRef.current.length === 0}
-              className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm font-bold ${historyRef.current.length === 0 ? 'cursor-not-allowed opacity-50' : ''} ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}
+              disabled={!canUndo}
+              className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm font-bold ${!canUndo ? 'cursor-not-allowed opacity-50' : ''} ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}
             >
               <Undo2 size={15} /> Undo
             </button>
             <button
               onClick={handleRedo}
-              disabled={redoHistoryRef.current.length === 0}
-              className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm font-bold ${redoHistoryRef.current.length === 0 ? 'cursor-not-allowed opacity-50' : ''} ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}
+              disabled={!canRedo}
+              className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 text-sm font-bold ${!canRedo ? 'cursor-not-allowed opacity-50' : ''} ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}
             >
               <Redo2 size={15} /> Redo
             </button>

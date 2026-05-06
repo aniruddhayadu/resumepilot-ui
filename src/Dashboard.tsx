@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ResumeBuilder from './components/ResumeBuilder'; 
 import TemplateGallery from './components/TemplateGallery'; 
 import { requestResumePdf } from './services/exportService';
@@ -8,13 +8,14 @@ import type { Resume } from './services/resumeService';
 import { clearSession, getUserEmail, getUserName } from './utils/storage';
 import { Activity, CheckCircle2, Target, UploadCloud, Edit3, Sparkles, Trash2, FileText, LayoutTemplate } from 'lucide-react'; 
 import ResumeWorkspace from './pages/ResumeWorkspace'; 
+import JobMatchDashboard from './pages/JobMatchDashboard';
 
 const Dashboard: React.FC = () => {
   const uName = getUserName();
   const uEmail = getUserEmail();
   
   const [selTpl, setSelTpl] = useState<number>(1);
-  const [curView, setCurView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool' | 'workspace' | 'templates'>('dashboard');
+  const [curView, setCurView] = useState<'dashboard' | 'create' | 'preview' | 'edit' | 'ats-tool' | 'workspace' | 'templates' | 'job-match'>('dashboard');
   const [selRes, setSelRes] = useState<Resume | null>(null);
   
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -54,11 +55,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (curView === 'dashboard') loadResumes();
-  }, [curView]);
-
-  const loadResumes = async () => {
+  const loadResumes = useCallback(async () => {
     setLoading(true); setErr('');
     try {
       const data = await fetchUserResumes(uEmail, uName);
@@ -68,7 +65,11 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [uEmail, uName]);
+
+  useEffect(() => {
+    if (curView === 'dashboard') loadResumes();
+  }, [curView, loadResumes]);
 
   const handleDel = async (id: number) => {
     if (!window.confirm("Delete this resume?")) return;
@@ -116,7 +117,9 @@ const Dashboard: React.FC = () => {
     
     // Naya Parse logic ATS ke liye taaki array wala data match ho jaye
     let parsedContent: any = {};
-    try { if (selRes.content) parsedContent = JSON.parse(selRes.content); } catch (e) {}
+    try { if (selRes.content) parsedContent = JSON.parse(selRes.content); } catch {
+      parsedContent = {};
+    }
     
     const expText = parsedContent.experiences?.map((e:any) => `${e.company} ${e.role} ${e.desc}`).join(' ') || '';
     const eduText = parsedContent.educations?.map((e:any) => `${e.inst} ${e.degree}`).join(' ') || '';
@@ -126,7 +129,7 @@ const Dashboard: React.FC = () => {
     try {
       const res = await checkAtsScore(selRes.title || 'Professional', text);
       setAtsData(res);
-    } catch (e) {
+    } catch {
       alert("ATS failed.");
     } finally {
       setAnalyzing(false);
@@ -141,7 +144,7 @@ const Dashboard: React.FC = () => {
       const text = await extractTextFromPdf(selFile);
       const res = await checkAtsScore(extJob, text);
       setExtAts(res);
-    } catch (e) {
+    } catch {
       alert("Analysis failed.");
     } finally {
       setExtAnalyzing(false);
@@ -177,6 +180,10 @@ const Dashboard: React.FC = () => {
           <button onClick={() => setCurView('ats-tool')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 ${curView === 'ats-tool' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30 transform scale-105' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}>
             <span className="flex items-center gap-2"><Target className="w-4 h-4" /> ATS Analyzer</span>
             <span className="bg-pink-500/40 text-pink-200 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">AI</span>
+          </button>
+          <button onClick={() => setCurView('job-match')} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 ${curView === 'job-match' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/30 transform scale-105' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'}`}>
+            <span className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Job Match</span>
+            <span className="bg-emerald-500/40 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">NEW</span>
           </button>
         </nav>
         <div className="p-4 border-t border-slate-700">
@@ -235,6 +242,12 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
+          {curView === 'job-match' && (
+            <div className="w-full h-full">
+              <JobMatchDashboard resumeId={selRes?.id || 1} userId={1} />
+            </div>
+          )}
+
           {(curView === 'create' || curView === 'edit') && (
             <ResumeBuilder existingResume={curView === 'edit' ? selRes : null} onSuccessReturn={() => setCurView('dashboard')} />
           )}
@@ -244,7 +257,9 @@ const Dashboard: React.FC = () => {
             let details: any = {};
             try {
               if (selRes.content) details = JSON.parse(selRes.content);
-            } catch (e) {}
+            } catch {
+              details = {};
+            }
 
             const palette = getPreviewPalette(previewTemplateId);
 
@@ -599,7 +614,7 @@ const Dashboard: React.FC = () => {
                               try { 
                                   const pr = JSON.parse(r.content || '{}');
                                   return pr.objective || r.summary || 'No summary provided.';
-                              } catch(e) { return r.summary || 'No summary provided.' }
+                              } catch { return r.summary || 'No summary provided.' }
                           })()}
                         </p>
                       </div>

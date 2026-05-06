@@ -31,7 +31,9 @@ export const fetchUserResumes = async (email: string, fallback: string): Promise
     let pContent: any = {};
     try {
         if (r.content) pContent = JSON.parse(r.content);
-    } catch (e) {}
+    } catch {
+      pContent = {};
+    }
 
     return {
       id: r.id,

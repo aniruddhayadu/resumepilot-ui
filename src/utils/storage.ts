@@ -12,7 +12,12 @@ export const getUserEmail = (): string =>
   localStorage.getItem(storageKeys.userEmail) || 'testuser@capgemini.com';
 
 export const setAuthSession = (token: string, userEmail: string, userName?: string): void => {
-  localStorage.setItem(storageKeys.token, token);
+  const cleanedToken = typeof token === 'string' ? token.replace(/^Bearer\s+/i, '').trim() : '';
+  if (!cleanedToken) {
+    throw new Error('Cannot store an empty auth token.');
+  }
+
+  localStorage.setItem(storageKeys.token, cleanedToken);
   localStorage.setItem(storageKeys.userEmail, userEmail);
 
   if (userName) {

@@ -60,7 +60,7 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
       setSummary(generatedText);
       setStatusMessage('AI Summary generated successfully! ✨');
       setIsSuccess(true);
-    } catch (err) {
+    } catch {
       setStatusMessage('Failed to connect to AI Service. Ensure port 8085 is running.');
       setIsSuccess(false);
     } finally {
@@ -75,8 +75,10 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
 
     // Include new fields in the content JSON
     const resumeContentObj = { fullName, phone, linkedin, github, summary, skills, experience, education };
+    const fallbackTitle = fullName.trim() ? fullName.trim().split(/\s+/).slice(0, 2).join(' ') : 'Resume';
+    const resolvedTitle = title.trim() || `Resume_${fallbackTitle.replace(/[^a-zA-Z0-9]+/g, '_')}_${new Date().toISOString().slice(0, 10)}`;
     const payload: ResumePayload = {
-      title,
+      title: resolvedTitle,
       content: JSON.stringify(resumeContentObj)
     };
 

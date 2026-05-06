@@ -3,7 +3,7 @@ import Dashboard from './Dashboard';
 import PublicAts from './pages/PublicAts'; 
 import AdminDashboard from './pages/AdminDashboard'; 
 import TemplateGallery from './components/TemplateGallery';
-import { getGoogleLoginUrl, login, register, forgotPassword } from './api'; 
+import { getGoogleLoginUrl, login, register, forgotPassword, verifyOtp } from './api'; 
 import { extractEmailFromToken } from './utils/jwt';
 import { getUserEmail, setAuthSession, storageKeys, clearSession } from './utils/storage';
 import { ArrowRight, Sparkles, Target, LayoutTemplate, ShieldCheck } from 'lucide-react';
@@ -57,13 +57,7 @@ const App: React.FC = () => {
       const cleanEmail = email.toLowerCase().trim();
 
       if (isOtpView) {
-        const res = await fetch('http://localhost:8081/auth/verify-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmail, otp })
-        });
-        
-        if (!res.ok) throw new Error(await res.text());
+        await verifyOtp(cleanEmail, otp);
         
         setSuccessMsg("Verification Successful! You can now login.");
         setIsOtpView(false);
@@ -72,6 +66,9 @@ const App: React.FC = () => {
       } 
       else if (currentView === 'login') {
         const data = await login({ email: cleanEmail, password });
+        if (!data.token) {
+          throw new Error('Authentication failed. No token returned by server.');
+        }
         setAuthSession(data.token, cleanEmail, data.fullName);
         const role = cleanEmail === 'aniruddha9131@gmail.com' ? 'ADMIN' : (data.role || 'USER');
         localStorage.setItem('userRole', role); 
