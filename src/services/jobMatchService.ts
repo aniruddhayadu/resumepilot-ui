@@ -3,6 +3,12 @@ import type { AiAnalysis, Job } from '../types/jobMatch';
 
 const JOB_MATCH_BASE_URL = 'http://localhost:8087/job-matches';
 
+const cleanText = (value: unknown, fallback = ''): string => {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || ['null', 'undefined', 'n/a', 'na'].includes(text.toLowerCase())) return fallback;
+  return text;
+};
+
 export const fetchJobs = async (jobTitle: string, location: string): Promise<Job[]> => {
   const response = await axios.post(`${JOB_MATCH_BASE_URL}/fetchLinkedIn`, {
     jobTitle,
@@ -12,10 +18,10 @@ export const fetchJobs = async (jobTitle: string, location: string): Promise<Job
   const jobs = Array.isArray(response.data) ? response.data : response.data?.jobs || [];
 
   return jobs.map((job: any) => ({
-    title: job.title || job.jobTitle || 'Untitled Role',
-    company: job.company || job.companyName || 'Unknown Company',
-    location: job.location || 'Remote',
-    url: job.url || job.link || '#',
+    title: cleanText(job.title || job.jobTitle, 'Untitled Role'),
+    company: cleanText(job.company || job.companyName, 'Unknown Company'),
+    location: cleanText(job.location, cleanText(location, 'Remote')),
+    url: cleanText(job.url || job.link, '#'),
   }));
 };
 

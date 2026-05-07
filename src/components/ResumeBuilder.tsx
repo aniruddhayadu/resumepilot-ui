@@ -54,9 +54,14 @@ const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ existingResume, onSuccess
     setIsGeneratingAI(true);
     setStatusMessage('AI Soch rhi h time lagega bhaiiiii... ⏳');
     setIsSuccess(true);
+    setSummary('');
 
     try {
-      const generatedText = await generateSummaryWithAI(title);
+      const generatedText = await generateSummaryWithAI(title, {
+        skills,
+        experience,
+        education,
+      });
       setSummary(generatedText);
       setStatusMessage('AI Summary generated successfully! ✨');
       setIsSuccess(true);

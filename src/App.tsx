@@ -43,7 +43,9 @@ const App: React.FC = () => {
     } 
     else if (storedTkn) {
       setHasToken(true);
-      if (storedRole) setUserRole(storedRole);
+      const role = !storedRole || storedRole === 'FREE' ? 'USER' : storedRole;
+      localStorage.setItem('userRole', role);
+      setUserRole(role);
     }
   }, []);
 

@@ -187,8 +187,16 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
       return;
     }
     setIsGeneratingAI(true);
+    setResumeData((current: any) => ({ ...current, objective: '' }));
     try {
-      const generatedText = await generateSummaryWithAI(resumeData.title);
+      const generatedText = await generateSummaryWithAI(resumeData.title, {
+        skills: resumeData.skills,
+        experience: resumeData.experiences?.map((item: any) => [item.role, item.company, item.desc].filter(Boolean).join(' ')).join('\n'),
+        projects: resumeData.projects?.map((item: any) => [item.name, item.desc].filter(Boolean).join(' ')).join('\n'),
+        education: resumeData.educations?.map((item: any) => [item.degree, item.inst].filter(Boolean).join(' ')).join('\n'),
+        achievements: resumeData.achievements,
+        certifications: resumeData.certifications,
+      });
       setResumeData({ ...resumeData, objective: generatedText });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to connect to AI Service.');

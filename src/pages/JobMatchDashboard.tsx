@@ -217,7 +217,7 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
     }
 
     try {
-      const jobDescription = `${job.title} at ${job.company} in ${resolveLocation(job.location)}`;
+      const jobDescription = job.title;
       const analysis = await analyzeMatch(selectedResumeId || resumeId, userId, job.title, jobDescription, selectedResumeText);
       setCardState((prev) => ({
         ...prev,
