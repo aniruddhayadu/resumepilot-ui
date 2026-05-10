@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const proxyTarget = process.env.VITE_PROXY_TARGET || process.env.PROXY_TARGET || 'http://localhost:8080'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -11,28 +13,51 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': {
-        target: 'http://localhost:8080',
+        target: proxyTarget,
         changeOrigin: true,
       },
       '/oauth2': {
-        target: 'http://localhost:8080',
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/api/templates': {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/api/payments': {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/api/admin': {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/api/jobmatch': {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/templates/images': {
+        target: proxyTarget,
         changeOrigin: true,
       },
       '/resume': {
-        target: 'http://localhost:8082',
+        target: proxyTarget,
         changeOrigin: true,
       },
       '/exports': {
-        target: 'http://localhost:8083',
+        target: proxyTarget,
         changeOrigin: true,
       },
       '/export': {
-        target: 'http://localhost:8083',
+        target: proxyTarget,
         changeOrigin: true,
       },
-      // 👇 YAHAN AI SERVICE KA NAYA PROXY ADD KIYA HAI 👇
       '/ai': {
-        target: 'http://localhost:8085',
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      '/job-matches': {
+        target: proxyTarget,
         changeOrigin: true,
       },
     },

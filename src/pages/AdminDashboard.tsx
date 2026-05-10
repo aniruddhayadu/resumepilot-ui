@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 // 🚀 1. Trash2 Icon import kar liya
 import { LayoutDashboard, Users, LogOut, Monitor, FileText, Target, Activity, Trash2 } from 'lucide-react';
 
+const ADMIN_BASE_URL = (import.meta.env.VITE_ADMIN_BASE_URL || '').replace(/\/$/, '');
+
 interface AdminDashboardProps {
   onLogout: () => void;
   onSwitchToUser: () => void;
@@ -26,7 +28,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const fetchAdminStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8081/api/admin/stats', {
+        const response = await fetch(`${ADMIN_BASE_URL}/api/admin/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -49,7 +51,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (activeTab === 'users') {
       setLoadingUsers(true);
       const token = localStorage.getItem('token');
-      fetch('http://localhost:8081/api/admin/users', {
+      fetch(`${ADMIN_BASE_URL}/api/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => res.json())
@@ -73,7 +75,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8081/api/admin/users/${userId}`, {
+      const response = await fetch(`${ADMIN_BASE_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` } // 🚀 Token bhejna zaroori hai
       });

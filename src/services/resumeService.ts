@@ -15,7 +15,7 @@ export interface ResumePayload {
   content: string;
 }
 
-const BASE_URL = import.meta.env.VITE_RESUME_BASE_URL || 'http://localhost:8082';
+const BASE_URL = (import.meta.env.VITE_RESUME_BASE_URL || '').replace(/\/$/, '');
 
 export const fetchUserResumes = async (email: string, fallback: string): Promise<Resume[]> => {
   const res = await fetch(`${BASE_URL}/resume/my-resumes`, {

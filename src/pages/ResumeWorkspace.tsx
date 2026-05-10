@@ -3,6 +3,8 @@ import { Layout, Download, FileText, Save, Loader2, CheckCircle2, Trash2, Zap, M
 import { getUserEmail } from '../utils/storage';
 import { generateSummaryWithAI } from '../services/aiService';
 
+const RESUME_BASE_URL = (import.meta.env.VITE_RESUME_BASE_URL || '').replace(/\/$/, '');
+
 interface ResumeWorkspaceProps {
   existingData?: any;
   templateId?: number;
@@ -298,7 +300,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
         setSaveError('Login token missing. Please login again.');
         return false;
       }
-      const url = resumeId ? `http://localhost:8082/resume/update/${resumeId}` : 'http://localhost:8082/resume/create';
+      const url = resumeId ? `${RESUME_BASE_URL}/resume/update/${resumeId}` : `${RESUME_BASE_URL}/resume/create`;
       const response = await fetch(url, {
         method: resumeId ? 'PUT' : 'POST',
         headers: {

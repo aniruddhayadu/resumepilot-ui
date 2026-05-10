@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AiAnalysis, Job } from '../types/jobMatch';
 
-const JOB_MATCH_BASE_URL = 'http://localhost:8087/job-matches';
+const JOB_MATCH_BASE_URL = (import.meta.env.VITE_JOB_MATCH_BASE_URL || '/api/jobmatch').replace(/\/$/, '');
 
 const cleanText = (value: unknown, fallback = ''): string => {
   const text = typeof value === 'string' ? value.trim() : '';

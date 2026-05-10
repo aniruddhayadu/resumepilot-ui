@@ -1,4 +1,4 @@
-const EXPORT_BASE_URL = import.meta.env.VITE_EXPORT_BASE_URL || 'http://localhost:8083';
+const EXPORT_BASE_URL = (import.meta.env.VITE_EXPORT_BASE_URL || '').replace(/\/$/, '');
 
 interface ExportJobResponse {
   fileUrl?: string;

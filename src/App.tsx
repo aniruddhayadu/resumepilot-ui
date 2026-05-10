@@ -29,10 +29,15 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const tkn = params.get('token');
     const uName = params.get('userName');
+    const oauthError = params.get('oauthError');
     const storedTkn = localStorage.getItem(storageKeys.token);
     const storedRole = localStorage.getItem('userRole');
 
-    if (tkn) {
+    if (oauthError) {
+      setErrorMsg(oauthError);
+      window.history.replaceState({}, document.title, "/");
+    }
+    else if (tkn) {
       const extEmail = extractEmailFromToken(tkn) || getUserEmail();
       setAuthSession(tkn, extEmail, uName || undefined);
       window.history.replaceState({}, document.title, "/"); 

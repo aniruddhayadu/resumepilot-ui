@@ -1,10 +1,8 @@
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_BASE_URL || '';
-const GOOGLE_AUTH_BASE_URL = import.meta.env.VITE_GOOGLE_AUTH_BASE_URL || '';
+const AUTH_BASE_URL = (import.meta.env.VITE_AUTH_BASE_URL || '').replace(/\/$/, '');
+const GOOGLE_AUTH_BASE_URL = (import.meta.env.VITE_GOOGLE_AUTH_BASE_URL || '').replace(/\/$/, '');
 const AUTH_BASE_URLS = Array.from(new Set([
-  AUTH_BASE_URL,
-  'http://localhost:8080',
-  'http://localhost:8081',
-  '', // Last fallback: relative path via Vite proxy
+  AUTH_BASE_URL.trim(),
+  '', // Same-origin fallback for Vite/nginx proxy.
 ].filter((url) => url !== undefined && url !== null)));
 
 export interface LoginRequest {
@@ -79,6 +77,6 @@ export const register = async (payload: RegisterRequest): Promise<AuthResponse> 
 };
 
 export const getGoogleLoginUrl = (): string => {
-  const baseUrl = GOOGLE_AUTH_BASE_URL || AUTH_BASE_URL || 'http://localhost:8080';
+  const baseUrl = GOOGLE_AUTH_BASE_URL || AUTH_BASE_URL;
   return `${baseUrl}/oauth2/authorization/google`;
 };
