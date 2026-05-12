@@ -1,26 +1,9 @@
-const AI_BASE_URL = (import.meta.env.VITE_AI_BASE_URL || '/ai').replace(/\/$/, '');
+import api from '../api/api';
 
-const getAiHeaders = (): HeadersInit => {
-  const token = localStorage.getItem('token')?.replace(/^Bearer\s+/i, '').trim() || '';
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-const getAiErrorMessage = async (response: Response): Promise<string> => {
+const getAiErrorMessage = (error: unknown): string => {
   const fallback = 'AI service request failed';
-  try {
-    const data = await response.json();
-    return data?.message || data?.error || data?.detail || data?.title || fallback;
-  } catch {
-    return fallback;
-  }
+  const data = (error as any)?.response?.data;
+  return data?.message || data?.error || data?.detail || data?.title || (error as any)?.message || fallback;
 };
 
 export interface SummaryContext {
@@ -49,35 +32,30 @@ const buildSummaryContext = (context?: SummaryContext): string => {
 export const generateSummaryWithAI = async (jobTitle: string, context?: SummaryContext): Promise<string> => {
   const normalizedTitle = normalizeRoleTitle(jobTitle);
 
-  const response = await fetch(`${AI_BASE_URL}/generate-summary`, {
-    method: 'POST',
-    headers: getAiHeaders(),
-    body: JSON.stringify({ jobTitle: normalizedTitle, resumeContent: buildSummaryContext(context) }),
-  });
-  if (!response.ok) throw new Error(await getAiErrorMessage(response));
-  const data = await response.json();
+  let data: any;
+  try {
+    const response = await api.post('/ai/generate-summary', { jobTitle: normalizedTitle, resumeContent: buildSummaryContext(context) });
+    data = response.data;
+  } catch (error) {
+    throw new Error(getAiErrorMessage(error));
+  }
   const generatedSummary = typeof data?.generatedSummary === 'string' ? data.generatedSummary.trim() : '';
   if (!generatedSummary) throw new Error('AI returned an empty summary');
   return generatedSummary;
 };
 
 export const checkAtsScore = async (jobTitle: string, resumeContent: string): Promise<{score: number, feedback: string}> => {
-  const response = await fetch(`${AI_BASE_URL}/analyze-ats`, {
-    method: 'POST',
-    headers: getAiHeaders(),
-    body: JSON.stringify({ jobTitle, resumeContent }),
-  });
-  
-  if (!response.ok) throw new Error(await getAiErrorMessage(response));
-  
-  const textResponse = await response.text();
+  let textResponse = '';
   try {
-    const data = JSON.parse(textResponse);
+    const response = await api.post('/ai/analyze-ats', { jobTitle, resumeContent }, { responseType: 'text' });
+    textResponse = response.data;
+    const data = typeof textResponse === 'string' ? JSON.parse(textResponse) : textResponse;
     return {
       score: Number(data?.score ?? 0),
       feedback: typeof data?.feedback === 'string' ? data.feedback : 'No feedback returned.',
     };
-  } catch {
+  } catch (error) {
+    if (!textResponse) throw new Error(getAiErrorMessage(error));
     throw new Error('AI returned invalid format');
   }
 };
@@ -85,15 +63,16 @@ export const checkAtsScore = async (jobTitle: string, resumeContent: string): Pr
 export const extractTextFromPdf = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
-  
-  const response = await fetch(`${AI_BASE_URL}/extract-pdf`, {
-    method: 'POST',
-    body: formData,
-  });
-  
-  if (!response.ok) throw new Error(await getAiErrorMessage(response));
-  
-  const data = await response.json();
+
+  let data: any;
+  try {
+    const response = await api.post('/ai/extract-pdf', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    data = response.data;
+  } catch (error) {
+    throw new Error(getAiErrorMessage(error));
+  }
   if (data.error) throw new Error(data.error);
   
   return data.text;

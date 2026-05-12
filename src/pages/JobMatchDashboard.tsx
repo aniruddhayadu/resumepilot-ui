@@ -253,10 +253,10 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
     const tone = getScoreTone(clampedScore);
 
     return (
-      <div className="flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-4 rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-sm">
         <div className="relative h-28 w-28 shrink-0">
           <svg viewBox="0 0 110 110" className="h-full w-full -rotate-90 transform">
-            <circle cx="55" cy="55" r={radius} stroke="#e2e8f0" strokeWidth="10" fill="transparent" />
+            <circle cx="55" cy="55" r={radius} stroke="#1e293b" strokeWidth="10" fill="transparent" />
             <circle
               cx="55"
               cy="55"
@@ -286,40 +286,40 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
   };
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(20,184,166,0.14),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="relative min-h-full overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.18),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(20,184,166,0.14),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 rounded-[2rem] border border-white/70 bg-white/80 p-5 shadow-2xl shadow-slate-200/40 backdrop-blur-xl sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-6 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-slate-900/75 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-indigo-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-300/20 bg-indigo-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-indigo-100">
               <Sparkles className="h-4 w-4" /> Job Match Dashboard
             </div>
             <div>
-              <h1 className="font-['Space_Grotesk'] text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h1 className="font-['Space_Grotesk'] text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
                 Find roles and measure resume fit in one place.
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
                 Search LinkedIn-style jobs from your Spring Boot backend, then run a quick AI fit analysis for each role.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm sm:w-fit sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-sm">
               <div className="text-xs font-bold uppercase tracking-widest text-slate-500">Backend</div>
-              <div className="mt-1 font-semibold text-slate-900">Port 8087</div>
+              <div className="mt-1 font-semibold text-slate-100">Gateway</div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-sm">
               <div className="text-xs font-bold uppercase tracking-widest text-slate-500">Resume Id</div>
-              <div className="mt-1 font-semibold text-slate-900">{resumeId}</div>
+              <div className="mt-1 font-semibold text-slate-100">{resumeId}</div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-sm">
               <div className="text-xs font-bold uppercase tracking-widest text-slate-500">User Id</div>
-              <div className="mt-1 font-semibold text-slate-900">{userId}</div>
+              <div className="mt-1 font-semibold text-slate-100">{userId}</div>
             </div>
           </div>
         </div>
 
-        <div className="mb-4 rounded-2xl border border-slate-200/70 bg-white/85 px-4 py-4 shadow-sm backdrop-blur-sm">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-slate-900/75 px-4 py-4 shadow-sm backdrop-blur-sm">
           <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
             <BriefcaseBusiness className="h-4 w-4 text-indigo-500" /> Resume Selector
           </div>
@@ -329,7 +329,7 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
               <select
                 value={selectedResumeId}
                 onChange={(e) => handleResumeChange(Number(e.target.value))}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm font-semibold text-slate-100 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
                 disabled={isLoadingResumes || resumes.length === 0}
               >
                 {resumes.length === 0 ? (
@@ -343,22 +343,22 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
                 )}
               </select>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-400">
               <div className="text-xs font-bold uppercase tracking-widest text-slate-500">Resume Status</div>
-              <div className="mt-1 font-semibold text-slate-900">
+              <div className="mt-1 font-semibold text-slate-100">
                 {isLoadingResumes ? 'Loading resumes...' : selectedResumeText ? 'Ready for AI analysis' : 'No resume selected'}
               </div>
             </div>
           </div>
           {resumeTextSource && (
-            <div className="mt-3 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+            <div className="mt-3 flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-100">
               <CheckCircle2 className="h-4 w-4" />
               {resumeTextSource}
             </div>
           )}
         </div>
 
-        <div className="mb-8 rounded-[2rem] border border-slate-200/70 bg-white/80 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl sm:p-6">
+        <div className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/75 p-5 shadow-xl shadow-black/30 backdrop-blur-xl sm:p-6">
           <div className="grid gap-4 lg:grid-cols-[1fr_0.6fr_auto]">
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Job Title</label>
@@ -368,7 +368,7 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="e.g. Java Developer"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/70 py-3 pl-11 pr-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
                 />
               </div>
             </div>
@@ -380,7 +380,7 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. Remote"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/70 py-3 pl-11 pr-4 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
                 />
               </div>
             </div>
@@ -429,13 +429,13 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
               const analysis = state.analysis;
 
               return (
-                <article key={key} className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-                  <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-5">
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+                <article key={key} className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-900/80 shadow-xl shadow-black/25 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-400/40 hover:shadow-indigo-500/10">
+                  <div className="border-b border-white/10 bg-white/[0.03] p-5">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-100">
                       <BriefcaseBusiness className="h-3.5 w-3.5" /> Job Match
                     </div>
-                    <h3 className="text-xl font-extrabold tracking-tight text-slate-900">{job.title}</h3>
-                    <p className="mt-1 text-sm font-semibold text-slate-600">{job.company}</p>
+                    <h3 className="text-xl font-extrabold tracking-tight text-white">{job.title}</h3>
+                    <p className="mt-1 text-sm font-semibold text-slate-400">{job.company}</p>
                     <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
                       <MapPin className="h-4 w-4" />
                       <span>{resolveLocation(job.location)}</span>
@@ -448,7 +448,7 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
                         href={job.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-indigo-300/40 hover:bg-indigo-500/10 hover:text-indigo-100"
                       >
                         <ExternalLink className="h-4 w-4" /> Apply Now
                       </a>
@@ -516,12 +516,12 @@ const JobMatchDashboard: React.FC<JobMatchDashboardProps> = ({ resumeId = 1, use
         )}
 
         {!isSearching && !hasResults && !searchError && (
-          <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-10 text-center shadow-sm backdrop-blur-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+          <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-900/70 p-10 text-center shadow-sm backdrop-blur-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-300">
               <Search className="h-7 w-7" />
             </div>
-            <h2 className="mt-5 text-2xl font-extrabold text-slate-900">Search to discover matching jobs</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+            <h2 className="mt-5 text-2xl font-extrabold text-white">Search to discover matching jobs</h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">
               Enter a role and location above to load jobs from your Spring Boot service, then analyze each job against your resume.
             </p>
           </div>

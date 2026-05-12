@@ -1,4 +1,4 @@
-const EXPORT_BASE_URL = (import.meta.env.VITE_EXPORT_BASE_URL || '').replace(/\/$/, '');
+import api from '../api/api';
 
 interface ExportJobResponse {
   fileUrl?: string;
@@ -64,38 +64,28 @@ export const requestResumePdf = async (
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
   const endpointCandidates: string[] = [
-    `${EXPORT_BASE_URL}/exports/pdf/${resumeId}/${resolvedUserId}`,
-    `${EXPORT_BASE_URL}/export/pdf/${resumeId}/${resolvedUserId}`,
-    `${EXPORT_BASE_URL}/exports/pdf/${resumeId}`,
-    `${EXPORT_BASE_URL}/export/pdf/${resumeId}`,
+    `/exports/pdf/${resumeId}/${resolvedUserId}`,
+    `/export/pdf/${resumeId}/${resolvedUserId}`,
+    `/exports/pdf/${resumeId}`,
+    `/export/pdf/${resumeId}`,
   ];
 
   let lastErrorMessage = 'Failed to generate PDF due to an unexpected export service response.';
 
   for (const endpoint of Array.from(new Set(endpointCandidates))) {
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ theme: 'professional', templateId: templateId.toString() }),
-      });
-
-      if (!response.ok) {
-        lastErrorMessage = `Export failed (${response.status}).`;
-        continue;
-      }
-
-      const job = await response.json() as ExportJobResponse;
+      const response = await api.post(endpoint, { theme: 'professional', templateId: templateId.toString() }, { headers });
+      const job = response.data as ExportJobResponse;
       
       if (job.status === 'COMPLETED' && job.fileUrl) return job.fileUrl;
       
       return new Promise((resolve, reject) => {
         let attempts = 0;
         const interval = setInterval(async () => {
-          attempts++;
-          try {
-            const statusRes = await fetch(`${EXPORT_BASE_URL}/export/status/${job.jobId}`);
-            const statusData = await statusRes.json();
+            attempts++;
+            try {
+            const statusRes = await api.get(`/export/status/${job.jobId}`);
+            const statusData = statusRes.data;
             
             if (statusData.status === 'COMPLETED' && statusData.fileUrl) {
               clearInterval(interval);

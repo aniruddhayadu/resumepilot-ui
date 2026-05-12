@@ -12,53 +12,50 @@ export default defineConfig({
   ],
   server: {
     proxy: {
+      '/api': {
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
       '/auth': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/oauth2': {
         target: proxyTarget,
         changeOrigin: true,
-      },
-      '/api/templates': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/api/payments': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/api/admin': {
-        target: proxyTarget,
-        changeOrigin: true,
-      },
-      '/api/jobmatch': {
-        target: proxyTarget,
-        changeOrigin: true,
+        secure: false,
       },
       '/templates/images': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/resume': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/exports': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/export': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/ai': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
       '/job-matches': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
       },
     },
   },

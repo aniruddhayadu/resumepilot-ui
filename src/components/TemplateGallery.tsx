@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api, { API_BASE_URL } from '../api/api';
 import { getUserEmail } from '../utils/storage';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const TEMPLATE_BASE_URL = (import.meta.env.VITE_TEMPLATE_BASE_URL || API_BASE_URL).replace(/\/$/, '');
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || 'rzp_test_SkRFZAHTzGMcqW';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || '';
 
 interface Template {
   id: number;
@@ -20,20 +18,50 @@ interface Props {
 
 const resolveAssetUrl = (url: string): string => {
   if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${API_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const pathname = new URL(url).pathname;
+      if (/^\/\d+\.(png|jpe?g|webp|svg)$/i.test(pathname) || pathname.startsWith('/images/') || pathname.startsWith('/templates/images/')) {
+        return resolveAssetUrl(pathname);
+      }
+    } catch {
+      return url;
+    }
+    return url;
+  }
+
+  const normalized = url.startsWith('/') ? url : `/${url}`;
+  if (/^\/\d+\.(png|jpe?g|webp|svg)$/i.test(normalized)) return `${API_BASE_URL}/templates/images${normalized}`;
+  if (normalized.startsWith('/templates/images/')) return `${API_BASE_URL}${normalized}`;
+  if (normalized.startsWith('/images/')) return `${API_BASE_URL}/templates${normalized}`;
+  return normalized;
 };
 
 const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
   const [tpls, setTpls] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    axios.get(`${TEMPLATE_BASE_URL}/api/templates`)
-      .then((r) => setTpls(r.data.map((template: Template) => ({
-        ...template,
-        thumbnailUrl: resolveAssetUrl(template.thumbnailUrl),
-      }))))
-      .catch((e) => console.error('Templates fetch error:', e));
+    setLoading(true);
+    setError('');
+
+    api.get('/api/templates')
+      .then((response) => {
+        const templates = Array.isArray(response.data)
+          ? response.data
+          : response.data?.content || response.data?.templates || [];
+
+        setTpls(templates.map((template: Template) => ({
+          ...template,
+          thumbnailUrl: resolveAssetUrl(template.thumbnailUrl),
+        })));
+      })
+      .catch((err) => {
+        setError('Unable to load templates from the API Gateway.');
+        console.error('Templates fetch error:', err);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleSelectTemplate = async (t: Template) => {
@@ -51,22 +79,25 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
     }
 
     try {
-      const r = await axios.post(`${TEMPLATE_BASE_URL}/api/payments/create-order`,
+      if (!RAZORPAY_KEY) {
+        throw new Error('Razorpay key is missing. Set RAZORPAY_KEY in the backend .env and rebuild the frontend container.');
+      }
+
+      const orderResponse = await api.post('/api/payments/create-order',
         { amount: t.price },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const oId = r.data;
 
-      const opt = {
+      const options = {
         key: RAZORPAY_KEY,
         amount: t.price * 100,
         currency: 'INR',
         name: 'ResumePilot Premium',
         description: t.name,
-        order_id: oId,
+        order_id: orderResponse.data,
         handler: async function (res: any) {
           try {
-            await axios.post(`${TEMPLATE_BASE_URL}/api/payments/verify`, {
+            await api.post('/api/payments/verify', {
               payId: res.razorpay_payment_id,
               email: getUserEmail() || 'user@example.com',
             }, { headers: { Authorization: `Bearer ${token}` } });
@@ -78,54 +109,97 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
           }
         },
       };
-      const rz = new (window as any).Razorpay(opt);
-      rz.open();
-    } catch (e) {
-      alert('Payment interaction failed. Check console.');
-      console.error(e);
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (err) {
+      const data = (err as any)?.response?.data;
+      const message = typeof data === 'string'
+        ? data
+        : data?.message || data?.error || (err as Error)?.message || 'Payment interaction failed.';
+      alert(message);
+      console.error(err);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className="min-h-[420px] animate-pulse rounded-2xl border border-slate-800 bg-slate-950/75 p-4 shadow-2xl shadow-black/25">
+            <div className="aspect-[4/5] rounded-xl bg-slate-900" />
+            <div className="mt-5 h-5 w-2/3 rounded bg-slate-900" />
+            <div className="mt-5 flex justify-between">
+              <div className="h-9 w-20 rounded-lg bg-slate-900" />
+              <div className="h-9 w-24 rounded-lg bg-slate-900" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-rose-400/25 bg-rose-500/10 px-5 py-4 text-sm font-semibold text-rose-100 shadow-lg shadow-rose-950/20">
+        {error} Check that the API Gateway is running.
+      </div>
+    );
+  }
+
+  if (tpls.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 px-6 py-10 text-center text-slate-300">
+        No templates returned from the API Gateway.
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
       {tpls.map((t, idx) => {
         const isPro = t.price > 0;
+        const isSelected = selectedId === t.id;
 
         return (
           <div
             key={t.id}
-            className={`group relative overflow-hidden rounded-2xl border-2 bg-white p-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20 sm:p-0 animate-fadeIn ${selectedId === t.id ? 'border-indigo-500 ring-4 ring-indigo-50 scale-105' : 'border-slate-200 hover:border-indigo-300'}`}
+            className={`group relative overflow-hidden rounded-2xl border bg-slate-950/90 p-0 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-indigo-400/70 hover:shadow-indigo-500/20 sm:p-0 animate-fadeIn ${isSelected ? 'scale-[1.02] border-indigo-400 ring-4 ring-indigo-500/20' : 'border-slate-800'}`}
             style={{ animationDelay: `${idx * 50}ms` }}
           >
-            {selectedId === t.id && (
-              <div className="absolute -top-3 -right-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg font-bold z-10 animate-pulse">✓</div>
+            {isSelected && (
+              <div className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-indigo-500 to-cyan-400 text-sm font-black text-white shadow-lg shadow-indigo-500/30">
+                OK
+              </div>
             )}
 
             <img
               src={t.thumbnailUrl}
               alt={t.name}
-              className="mb-4 aspect-[4/5] w-full rounded-t-2xl border-b-2 border-slate-100 bg-slate-50 object-cover object-top shadow-sm group-hover:scale-105 transition-transform duration-300"
+              className="mb-4 aspect-[4/5] w-full border-b border-slate-800 bg-slate-900 object-cover object-top shadow-sm transition-transform duration-300 group-hover:scale-[1.03]"
             />
 
             <div className="p-4 sm:p-5">
-              <h3 className="text-base font-bold text-slate-800 sm:text-lg group-hover:text-indigo-600 transition-colors">{t.name}</h3>
+              <h3 className="text-base font-bold text-slate-100 transition-colors group-hover:text-indigo-200 sm:text-lg">
+                {t.name}
+              </h3>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {isPro ? (
-                  <span className="inline-flex w-fit items-center font-bold text-amber-600 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 rounded-lg text-sm border border-amber-200 shadow-sm">
-                    PRO - ₹{t.price}
+                  <span className="inline-flex w-fit items-center rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-sm font-bold text-amber-200 shadow-sm">
+                    PRO - INR {t.price}
                   </span>
                 ) : (
-                  <span className="inline-flex w-fit items-center font-bold text-emerald-600 bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-1.5 rounded-lg text-sm border border-emerald-200 shadow-sm">
+                  <span className="inline-flex w-fit items-center rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-bold text-emerald-200 shadow-sm">
                     FREE
                   </span>
                 )}
 
                 <button
                   onClick={() => handleSelectTemplate(t)}
-                  className={`px-5 py-2 rounded-lg font-bold text-sm transition-all duration-300 shadow-sm ${selectedId === t.id ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-900 text-white hover:bg-indigo-600 hover:shadow-lg'} active:scale-95`}
+                  className={`rounded-lg px-5 py-2 text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 ${isSelected ? 'bg-indigo-400/15 text-indigo-100 ring-1 ring-indigo-300/25 hover:bg-indigo-400/20' : 'bg-indigo-600 text-white shadow-indigo-500/20 hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30'}`}
                 >
-                  {selectedId === t.id ? 'Selected' : (isPro ? 'Buy & Use' : 'Select')}
+                  {isSelected ? 'Selected' : (isPro ? 'Buy & Use' : 'Select')}
                 </button>
               </div>
             </div>

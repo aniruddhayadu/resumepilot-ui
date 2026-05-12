@@ -158,9 +158,9 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 font-sans print:bg-white overflow-hidden lg:flex-row flex-col">
-      <aside className="flex w-full shrink-0 flex-col bg-gradient-to-b from-slate-900 to-slate-800 text-white shadow-2xl print:hidden z-50 lg:w-64 border-r border-slate-700">
-        <div className="flex h-16 items-center px-5 border-b border-slate-700 sm:h-20 sm:px-8 bg-gradient-to-r from-indigo-600/10 to-purple-600/10">
+    <div className="flex min-h-screen flex-col overflow-hidden bg-slate-950 font-sans text-slate-100 print:bg-white lg:flex-row">
+      <aside className="z-50 flex w-full shrink-0 flex-col border-r border-white/10 bg-slate-950 text-white shadow-2xl shadow-black/40 print:hidden lg:w-64">
+        <div className="flex h-16 items-center border-b border-white/10 bg-white/[0.03] px-5 sm:h-20 sm:px-8">
           <h1 className="text-xl font-bold tracking-wide bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent sm:text-2xl">ResumePilot</h1>
         </div>
         <nav className="flex flex-1 gap-2 overflow-x-auto px-3 py-3 sm:px-4 sm:py-4 lg:block lg:space-y-2 lg:overflow-y-auto lg:overflow-x-visible scroll-smooth">
@@ -193,17 +193,17 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex min-h-0 flex-1 flex-col relative bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 print:h-auto lg:h-screen">
+      <main className="relative flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_34%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] print:h-auto print:bg-white lg:h-screen">
         {curView !== 'workspace' && (
-          <header className="flex h-auto flex-col gap-3 bg-white/70 backdrop-blur-xl px-4 py-4 shadow-sm print:hidden z-10 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10 border-b border-slate-200/50 transition-all duration-300">
-            <div className="text-sm text-slate-600 sm:text-base font-medium">
-              Overview / <span className="text-slate-900 font-bold capitalize">{curView.replace('-', ' ')}</span>
+          <header className="z-10 flex h-auto flex-col gap-3 border-b border-white/10 bg-slate-950/70 px-4 py-4 shadow-sm backdrop-blur-xl transition-all duration-300 print:hidden sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
+            <div className="text-sm font-medium text-slate-400 sm:text-base">
+              Overview / <span className="font-bold capitalize text-white">{curView.replace('-', ' ')}</span>
             </div>
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/30 border-2 border-white/50">
                 {uName.charAt(0).toUpperCase()}
               </div>
-              <span className="font-semibold text-slate-900 text-sm sm:text-base">{uName}</span>
+              <span className="text-sm font-semibold text-slate-100 sm:text-base">{uName}</span>
             </div>
           </header>
         )}
@@ -211,12 +211,12 @@ const Dashboard: React.FC = () => {
         <div className={`flex-1 min-h-0 ${curView === 'workspace' ? 'overflow-hidden' : 'px-4 py-6 sm:px-6 lg:p-10 overflow-y-auto print:p-0'}`}>
           
           {curView === 'templates' && (
-            <div className="mx-auto max-w-6xl rounded-2xl border border-slate-200/60 bg-white/60 backdrop-blur-xl p-5 shadow-lg sm:p-6 lg:p-8 animate-fadeIn">
+            <div className="mx-auto max-w-6xl animate-fadeIn rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-6 lg:p-8">
               <div className="mb-6 sm:mb-8">
-                <h2 className="flex items-center gap-3 text-2xl font-extrabold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent sm:text-3xl">
-                  <LayoutTemplate className="w-8 h-8 text-indigo-600" /> Template Gallery
+                <h2 className="flex items-center gap-3 text-2xl font-extrabold text-white sm:text-3xl">
+                  <LayoutTemplate className="w-8 h-8 text-indigo-300" /> Template Gallery
                 </h2>
-                <p className="mt-2 text-sm text-slate-600 sm:text-base lg:text-lg">Choose a professional design and jump straight into the Live Builder.</p>
+                <p className="mt-2 text-sm text-slate-400 sm:text-base lg:text-lg">Choose a professional design and jump straight into the Live Builder.</p>
               </div>
               <TemplateGallery 
                   selectedId={selTpl} 
@@ -491,51 +491,51 @@ const Dashboard: React.FC = () => {
           })()}
 
           {curView === 'ats-tool' && (
-            <div className="max-w-4xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+            <div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-slate-900/75 p-8 shadow-2xl shadow-black/30">
               <div className="mb-6">
-                <h2 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-                  <Activity className="w-8 h-8 text-purple-600" /> Standalone ATS Analyzer
+                <h2 className="flex items-center gap-3 text-3xl font-extrabold text-white">
+                  <Activity className="w-8 h-8 text-purple-300" /> Standalone ATS Analyzer
                 </h2>
-                <p className="text-gray-500 mt-2 text-lg">Upload any PDF resume here to check its ATS compatibility against a specific job role.</p>
+                <p className="mt-2 text-lg text-slate-400">Upload any PDF resume here to check its ATS compatibility against a specific job role.</p>
               </div>
 
               {extAts && (
-                <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
-                  <div className="relative w-24 h-24 shrink-0 flex items-center justify-center rounded-full bg-white shadow-sm border-[6px] border-purple-200">
+                <div className="mb-8 flex flex-col items-center gap-6 rounded-2xl border border-purple-300/20 bg-purple-500/10 p-6 md:flex-row">
+                  <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-[6px] border-purple-300/30 bg-slate-950 shadow-sm">
                     <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                       <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-purple-100" />
                       <circle cx="42" cy="42" r="38" stroke="currentColor" strokeWidth="6" fill="transparent" 
                         strokeDasharray={238} strokeDashoffset={238 - (238 * extAts.score) / 100} 
                         className={`transition-all duration-1000 ${extAts.score > 75 ? 'text-emerald-500' : extAts.score > 50 ? 'text-amber-500' : 'text-rose-500'}`} />
                     </svg>
-                    <span className="text-2xl font-black text-slate-800">{extAts.score}</span>
+                      <span className="text-2xl font-black text-white">{extAts.score}</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-purple-600" /> AI Feedback
-                    </h3>
-                    <p className="mt-2 text-slate-600 text-sm leading-relaxed">{extAts.feedback}</p>
+                      <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                        <CheckCircle2 className="w-5 h-5 text-purple-300" /> AI Feedback
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-300">{extAts.feedback}</p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Target Job Role</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-300">Target Job Role</label>
                   <input type="text" placeholder="e.g., Senior Java Developer" value={extJob} onChange={(e) => setExtJob(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10" />
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none placeholder:text-slate-600 focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10" />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Resume (PDF)</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-300">Upload Resume (PDF)</label>
                   <div 
                     onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                     onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all ${
-                      dragging ? 'border-purple-600 bg-purple-100 scale-[1.02]' 
-                      : selFile ? 'border-purple-500 bg-purple-50' 
-                      : 'border-slate-300 hover:border-purple-400 hover:bg-purple-50/50'
+                      dragging ? 'border-purple-400 bg-purple-500/15 scale-[1.02]' 
+                      : selFile ? 'border-purple-400 bg-purple-500/10' 
+                      : 'border-slate-700 hover:border-purple-400 hover:bg-white/5'
                     }`}
                   >
                     <input 
@@ -546,10 +546,10 @@ const Dashboard: React.FC = () => {
                     <UploadCloud className={`w-12 h-12 mx-auto mb-3 transition-colors ${
                       dragging ? 'text-purple-700' : selFile ? 'text-purple-600' : 'text-slate-400'
                     }`} />
-                    <p className="font-bold text-slate-700 text-lg">
+                    <p className="text-lg font-bold text-slate-100">
                       {selFile ? selFile.name : dragging ? "Drop PDF Here!" : "Click or drag to upload resume"}
                     </p>
-                    <p className="text-sm text-slate-500 mt-2">PDF files only (Max 5MB)</p>
+                    <p className="mt-2 text-sm text-slate-500">PDF files only (Max 5MB)</p>
                   </div>
                 </div>
 
@@ -566,22 +566,22 @@ const Dashboard: React.FC = () => {
 
           {curView === 'dashboard' && (
             <>
-              <div className="mb-8 flex justify-between items-center">
+              <div className="mb-8 flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-3xl font-extrabold text-gray-900">Your Documents</h2>
-                  <p className="text-gray-500 mt-2 text-lg">Manage and view your saved resumes.</p>
+                  <h2 className="text-3xl font-extrabold text-white">Your Documents</h2>
+                  <p className="mt-2 text-lg text-slate-400">Manage and view your saved resumes.</p>
                 </div>
                 
                 <div className="flex gap-3">
                   <button 
                     onClick={() => { setSelRes(null); setCurView('create'); }} 
-                    className="bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 font-bold py-2 px-5 rounded-lg transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-lg border border-indigo-300/30 bg-indigo-400/10 px-5 py-2 font-bold text-indigo-100 transition-colors hover:bg-indigo-400/15"
                   >
                     Create Basic
                   </button>
                   <button 
                     onClick={() => { setSelRes(null); setCurView('workspace'); }} 
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 font-bold text-white shadow-md shadow-indigo-500/20 transition-colors hover:bg-indigo-500"
                   >
                     <Sparkles className="w-4 h-4" /> Live Builder Pro
                   </button>
@@ -589,27 +589,27 @@ const Dashboard: React.FC = () => {
               </div>
 
               {loading ? (
-                <div className="text-center py-10 text-gray-500 font-medium">Loading your resumes...</div>
+                <div className="py-10 text-center font-medium text-slate-400">Loading your resumes...</div>
               ) : err ? (
-                <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{err}</div>
+                <div className="rounded-lg border border-rose-400/25 bg-rose-500/10 p-4 text-rose-100">{err}</div>
               ) : resumes.length === 0 ? (
-                <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
-                  <h3 className="text-xl font-bold text-gray-700 mt-4">No resumes found</h3>
-                  <p className="text-gray-500 mt-2 mb-6">You haven't created any resumes yet.</p>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-10 text-center shadow-2xl shadow-black/20">
+                  <h3 className="mt-4 text-xl font-bold text-slate-100">No resumes found</h3>
+                  <p className="mb-6 mt-2 text-slate-400">You haven't created any resumes yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {resumes.map((r) => (
-                    <div key={r.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all relative group flex flex-col h-full">
-                      <button onClick={() => handleDel(r.id)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">
+                    <div key={r.id} className="group relative flex h-full flex-col rounded-2xl border border-white/10 bg-slate-900/75 p-6 shadow-xl shadow-black/20 transition-all hover:-translate-y-1 hover:border-indigo-400/40 hover:shadow-indigo-500/10">
+                      <button onClick={() => handleDel(r.id)} className="absolute right-4 top-4 text-slate-500 transition-colors hover:text-rose-400">
                         <Trash2 className="w-5 h-5" />
                       </button>
                       <div className="flex-1 mt-2">
-                        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
+                        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-400/10 text-indigo-300">
                           <FileText className="w-5 h-5" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 truncate pr-6">{r.title}</h3>
-                        <p className="text-gray-500 mt-2 text-sm line-clamp-3">
+                        <h3 className="truncate pr-6 text-xl font-bold text-white">{r.title}</h3>
+                        <p className="mt-2 line-clamp-3 text-sm text-slate-400">
                           {(() => {
                               try { 
                                   const pr = JSON.parse(r.content || '{}');
@@ -618,11 +618,11 @@ const Dashboard: React.FC = () => {
                           })()}
                         </p>
                       </div>
-                      <div className="mt-6 flex space-x-3 pt-4 border-t border-gray-100">
-                        <button onClick={() => handleEdit(r)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-2 rounded-lg text-sm transition-colors border border-gray-200">
+                      <div className="mt-6 flex space-x-3 border-t border-white/10 pt-4">
+                        <button onClick={() => handleEdit(r)} className="flex-1 rounded-lg border border-white/10 bg-white/5 py-2 text-sm font-bold text-slate-200 transition-colors hover:bg-white/10">
                           Edit
                         </button>
-                        <button onClick={() => handlePreview(r)} className="flex-1 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold py-2 rounded-lg text-sm transition-colors">
+                        <button onClick={() => handlePreview(r)} className="flex-1 rounded-lg bg-indigo-500/15 py-2 text-sm font-bold text-indigo-100 transition-colors hover:bg-indigo-600 hover:text-white">
                           View Details
                         </button>
                       </div>

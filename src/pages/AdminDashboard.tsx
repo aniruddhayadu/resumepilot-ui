@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // 🚀 1. Trash2 Icon import kar liya
 import { LayoutDashboard, Users, LogOut, Monitor, FileText, Target, Activity, Trash2 } from 'lucide-react';
-
-const ADMIN_BASE_URL = (import.meta.env.VITE_ADMIN_BASE_URL || '').replace(/\/$/, '');
+import api from '../api/api';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -27,14 +26,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   useEffect(() => {
     const fetchAdminStats = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${ADMIN_BASE_URL}/api/admin/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
+        const response = await api.get('/api/admin/stats');
+        setStats(response.data);
       } catch {
         console.log("Stats fetch failed");
       } finally {
@@ -50,12 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   useEffect(() => {
     if (activeTab === 'users') {
       setLoadingUsers(true);
-      const token = localStorage.getItem('token');
-      fetch(`${ADMIN_BASE_URL}/api/admin/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => {
+      api.get('/api/admin/users')
+      .then(({ data }) => {
         if (Array.isArray(data)) setUsersList(data);
       })
       .catch(err => console.error(err))
@@ -74,13 +63,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${ADMIN_BASE_URL}/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` } // 🚀 Token bhejna zaroori hai
-      });
-
-      if (response.ok) {
+      await api.delete(`/api/admin/users/${userId}`);
         // UI se user ko turant hatao
         setUsersList(usersList.filter(user => (user.userId || user.id) !== userId));
         
@@ -88,9 +71,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setStats(prev => ({ ...prev, totalUsers: prev.totalUsers > 0 ? prev.totalUsers - 1 : 0 }));
         
         alert("User successfully udd gaya! 🚀");
-      } else {
-        alert("Delete nahi ho paya, backend me kuch gadbad hai.");
-      }
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Network error aa gaya bhai.");
@@ -98,7 +78,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f7f6] font-sans lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100 lg:flex-row">
       
       {/* SIDEBAR */}
       <aside className="flex shrink-0 flex-col justify-between border-r border-slate-800 bg-[#0f172a] text-white shadow-xl lg:w-72">
@@ -124,7 +104,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+      <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_34%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] p-4 sm:p-6 lg:p-10">
         {activeTab === 'dashboard' ? (
           <div className="max-w-6xl mx-auto space-y-8">
             <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-6 text-white shadow-lg sm:p-8 lg:p-10">
@@ -141,17 +121,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         ) : (
           <div className="max-w-6xl mx-auto">
-             <h2 className="mb-4 text-2xl font-bold text-slate-800 sm:mb-6 sm:text-3xl">User Directory</h2>
-             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+             <h2 className="mb-4 text-2xl font-bold text-white sm:mb-6 sm:text-3xl">User Directory</h2>
+             <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/75 shadow-2xl shadow-black/25">
                 {loadingUsers ? (
-                  <div className="p-12 text-center text-slate-500"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div><p>Loading database...</p></div>
+                  <div className="p-12 text-center text-slate-400"><div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-400"></div><p>Loading database...</p></div>
                 ) : usersList.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500"><Users className="w-16 h-16 mx-auto mb-4 text-slate-300" /><h3 className="text-lg font-bold">No Users Found</h3></div>
+                  <div className="p-12 text-center text-slate-400"><Users className="mx-auto mb-4 h-16 w-16 text-slate-600" /><h3 className="text-lg font-bold">No Users Found</h3></div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500 sm:text-sm">
+                        <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wider text-slate-400 sm:text-sm">
                           <th className="px-6 py-4">ID</th>
                           <th className="px-6 py-4">Full Name</th>
                           <th className="px-6 py-4">Email</th>
@@ -160,12 +140,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <th className="px-6 py-4 text-center">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-white/10">
                         {usersList.map((user, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50">
+                          <tr key={idx} className="hover:bg-white/[0.03]">
                             <td className="px-6 py-4 font-medium text-slate-500">#{idx + 1}</td>
-                            <td className="px-6 py-4 font-bold text-slate-800">{user.fullName || user.name || 'N/A'}</td>
-                            <td className="px-6 py-4 text-slate-600">{user.email}</td>
+                            <td className="px-6 py-4 font-bold text-slate-100">{user.fullName || user.name || 'N/A'}</td>
+                            <td className="px-6 py-4 text-slate-300">{user.email}</td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                                 {user.role || 'USER'}
@@ -196,9 +176,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 };
 
 const StatCard = ({ icon, title, value, trend }: any) => (
-  <div className="flex min-h-[160px] flex-col justify-between rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-    <div className="flex justify-between items-start mb-4"><div className="p-3 bg-slate-50 rounded-xl">{icon}</div><span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{trend}</span></div>
-    <div><p className="text-4xl font-black text-slate-800 mb-1">{value}</p><h3 className="text-slate-500 font-medium text-sm">{title}</h3></div>
+  <div className="flex min-h-[160px] flex-col justify-between rounded-2xl border border-white/10 bg-slate-900/75 p-6 shadow-xl shadow-black/20">
+    <div className="mb-4 flex items-start justify-between"><div className="rounded-xl bg-white/5 p-3">{icon}</div><span className="rounded-full bg-white/5 px-2 py-1 text-xs font-bold text-slate-400">{trend}</span></div>
+    <div><p className="mb-1 text-4xl font-black text-white">{value}</p><h3 className="text-sm font-medium text-slate-400">{title}</h3></div>
   </div>
 );
 

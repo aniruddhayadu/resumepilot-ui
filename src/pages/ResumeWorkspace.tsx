@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Layout, Download, FileText, Save, Loader2, CheckCircle2, Trash2, Zap, Moon, Sun, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { getUserEmail } from '../utils/storage';
 import { generateSummaryWithAI } from '../services/aiService';
-
-const RESUME_BASE_URL = (import.meta.env.VITE_RESUME_BASE_URL || '').replace(/\/$/, '');
+import api from '../api/api';
 
 interface ResumeWorkspaceProps {
   existingData?: any;
@@ -300,15 +299,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
         setSaveError('Login token missing. Please login again.');
         return false;
       }
-      const url = resumeId ? `${RESUME_BASE_URL}/resume/update/${resumeId}` : `${RESUME_BASE_URL}/resume/create`;
-      const response = await fetch(url, {
-        method: resumeId ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'User-Email': getUserEmail()
-        },
-        body: JSON.stringify({
+      const url = resumeId ? `/resume/update/${resumeId}` : '/resume/create';
+      const payload = {
           title: (() => {
             const currentTitle = resumeData.title.trim();
             if (currentTitle && currentTitle.toLowerCase() !== 'java developer') return currentTitle;
@@ -316,20 +308,14 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
             return `Resume_${jobTag.replace(/[^a-zA-Z0-9]+/g, '_')}_${new Date().toISOString().slice(0, 10)}`;
           })(),
           content: JSON.stringify({ ...resumeData, templateId: activeTemplateId, summary: resumeData.objective || 'Professional Resume' })
-        })
-      });
-
-      if (!response.ok) {
-        setSaveError(`Save failed (${response.status}). Please retry.`);
-        return false;
-      }
+        };
+      const response = resumeId
+        ? await api.put(url, payload, { headers: { 'User-Email': getUserEmail() } })
+        : await api.post(url, payload, { headers: { 'User-Email': getUserEmail() } });
 
       try {
-        const savedText = await response.text();
-        if (savedText) {
-          const savedResume = JSON.parse(savedText);
-          if (savedResume.id) setResumeId(savedResume.id);
-        }
+        const savedResume = response.data;
+        if (savedResume?.id) setResumeId(savedResume.id);
       } catch (e) {
         console.error('Save parse warning', e);
       }

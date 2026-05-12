@@ -1,3 +1,5 @@
+import api from '../api/api';
+
 export interface Resume {
   id: number;
   title: string;
@@ -15,17 +17,12 @@ export interface ResumePayload {
   content: string;
 }
 
-const BASE_URL = (import.meta.env.VITE_RESUME_BASE_URL || '').replace(/\/$/, '');
-
 export const fetchUserResumes = async (email: string, fallback: string): Promise<Resume[]> => {
-  const res = await fetch(`${BASE_URL}/resume/my-resumes`, {
-    method: 'GET',
+  const res = await api.get('/resume/my-resumes', {
     headers: { 'User-Email': email },
   });
 
-  if (!res.ok) throw new Error('Fetch failed');
-
-  const raw = await res.json();
+  const raw = res.data;
 
   return raw.map((r: any) => {
     let pContent: any = {};
@@ -50,22 +47,19 @@ export const fetchUserResumes = async (email: string, fallback: string): Promise
 };
 
 export const deleteResume = async (id: number, email: string): Promise<void> => {
-  const res = await fetch(`${BASE_URL}/resume/delete/${id}`, {
-    method: 'DELETE',
+  await api.delete(`/resume/delete/${id}`, {
     headers: { 'User-Email': email },
   });
-  if (!res.ok) throw new Error(`Error ${res.status}`);
 };
 
 export const saveResume = async (payload: ResumePayload, email: string, id?: number): Promise<void> => {
   const isUpd = Boolean(id);
-  const url = isUpd ? `${BASE_URL}/resume/update/${id}` : `${BASE_URL}/resume/create`;
-  
-  const res = await fetch(url, {
-    method: isUpd ? 'PUT' : 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Email': email },
-    body: JSON.stringify(payload),
-  });
+  const url = isUpd ? `/resume/update/${id}` : '/resume/create';
 
-  if (!res.ok) throw new Error('Save failed');
+  if (isUpd) {
+    await api.put(url, payload, { headers: { 'User-Email': email } });
+    return;
+  }
+
+  await api.post(url, payload, { headers: { 'User-Email': email } });
 };

@@ -1,9 +1,6 @@
-const AUTH_BASE_URL = (import.meta.env.VITE_AUTH_BASE_URL || '').replace(/\/$/, '');
-const GOOGLE_AUTH_BASE_URL = (import.meta.env.VITE_GOOGLE_AUTH_BASE_URL || '').replace(/\/$/, '');
-const AUTH_BASE_URLS = Array.from(new Set([
-  AUTH_BASE_URL.trim(),
-  '', // Same-origin fallback for Vite/nginx proxy.
-].filter((url) => url !== undefined && url !== null)));
+import api, { API_BASE_URL } from '../api/api';
+
+const GOOGLE_AUTH_URL = `${API_BASE_URL}/oauth2/authorization/google`;
 
 export interface LoginRequest {
   email: string;
@@ -38,34 +35,13 @@ const normalizeAuthResponse = (data: any): AuthResponse => ({
 });
 
 const requestJson = async (path: string, payload: unknown): Promise<any> => {
-  let lastError: unknown = null;
-
-  for (const baseUrl of AUTH_BASE_URLS) {
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = response.headers.get('content-type') || '';
-      const data = contentType.includes('application/json')
-        ? await response.json()
-        : { message: (await response.text()).slice(0, 500) || `Request failed at ${baseUrl}${path}` };
-
-      if (response.ok) return data;
-
-      if (![404, 405].includes(response.status) && response.status < 500) {
-        throw new Error(data?.message || 'Authentication failed. Please try again.');
-      }
-
-      lastError = new Error(data?.message || `Auth service unavailable at ${baseUrl}`);
-    } catch (error) {
-      lastError = error;
-    }
+  try {
+    const response = await api.post(path, payload);
+    return response.data;
+  } catch (error) {
+    const data = (error as any)?.response?.data;
+    throw new Error(data?.message || data?.error || (error as any)?.message || 'Authentication service is unavailable.');
   }
-
-  throw lastError instanceof Error ? lastError : new Error('Authentication service is unavailable.');
 };
 
 export const login = async (payload: LoginRequest): Promise<AuthResponse> => {
@@ -77,6 +53,5 @@ export const register = async (payload: RegisterRequest): Promise<AuthResponse> 
 };
 
 export const getGoogleLoginUrl = (): string => {
-  const baseUrl = GOOGLE_AUTH_BASE_URL || AUTH_BASE_URL;
-  return `${baseUrl}/oauth2/authorization/google`;
+  return GOOGLE_AUTH_URL;
 };

@@ -1,5 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG VITE_RAZORPAY_KEY
+ENV VITE_RAZORPAY_KEY=${VITE_RAZORPAY_KEY}
 
 COPY package*.json ./
 RUN npm ci

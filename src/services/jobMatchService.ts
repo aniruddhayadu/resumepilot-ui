@@ -1,7 +1,5 @@
-import axios from 'axios';
+import api from '../api/api';
 import type { AiAnalysis, Job } from '../types/jobMatch';
-
-const JOB_MATCH_BASE_URL = (import.meta.env.VITE_JOB_MATCH_BASE_URL || '/api/jobmatch').replace(/\/$/, '');
 
 const cleanText = (value: unknown, fallback = ''): string => {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -10,7 +8,7 @@ const cleanText = (value: unknown, fallback = ''): string => {
 };
 
 export const fetchJobs = async (jobTitle: string, location: string): Promise<Job[]> => {
-  const response = await axios.post(`${JOB_MATCH_BASE_URL}/fetchLinkedIn`, {
+  const response = await api.post('/api/jobmatch/fetchLinkedIn', {
     jobTitle,
     location,
   });
@@ -32,7 +30,7 @@ export const analyzeMatch = async (
   jobDescription: string,
   resumeContent: string,
 ): Promise<AiAnalysis> => {
-  const response = await axios.post(`${JOB_MATCH_BASE_URL}/analyze/${resumeId}`, {
+  const response = await api.post(`/api/jobmatch/analyze/${resumeId}`, {
     userId,
     jobTitle,
     jobDescription,
