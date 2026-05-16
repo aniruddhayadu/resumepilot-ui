@@ -9,6 +9,7 @@ import { clearSession, getUserEmail, getUserName } from './utils/storage';
 import { Activity, CheckCircle2, Target, UploadCloud, Edit3, Sparkles, Trash2, FileText, LayoutTemplate } from 'lucide-react'; 
 import ResumeWorkspace from './pages/ResumeWorkspace'; 
 import JobMatchDashboard from './pages/JobMatchDashboard';
+import { TemplateManager } from './components/TemplateEngine';
 
 const Dashboard: React.FC = () => {
   const uName = getUserName();
@@ -307,6 +308,15 @@ const Dashboard: React.FC = () => {
                   </div>
                 )}
 
+                <div className="mt-8 flex justify-center print:mt-0">
+                  <TemplateManager
+                    data={details}
+                    templateId={previewTemplateId}
+                    userPlan={localStorage.getItem('userRole') === 'ADMIN' ? 'ADMIN' : 'FREE'}
+                  />
+                </div>
+
+                <div className="hidden">
                 {previewIsTwoColumn ? (
                   <div className="print:text-black mt-8 text-slate-900">
                     <div className="mb-8 border-b border-slate-200 pb-6">
@@ -486,6 +496,7 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             );
           })()}

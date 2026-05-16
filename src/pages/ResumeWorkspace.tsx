@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Layout, Download, FileText, Save, Loader2, CheckCircle2, Trash2, Zap, Moon, Sun, RotateCcw, Undo2, Redo2 } from 'lucide-react';
+import { Layout, Download, FileText, Save, Loader2, CheckCircle2, Zap, Moon, Sun, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { getUserEmail } from '../utils/storage';
 import { generateSummaryWithAI } from '../services/aiService';
 import api from '../api/api';
+import { getUnlockedTemplateIds, isTemplateAccessible, TemplateManager, type TemplateEditor } from '../components/TemplateEngine';
 
 interface ResumeWorkspaceProps {
   existingData?: any;
@@ -78,6 +79,7 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
   const [resumeId, setResumeId] = useState<number | null>(null);
 
   const [activeTemplateId, setActiveTemplateId] = useState(templateId);
+  const [unlockedTemplateIds, setUnlockedTemplateIds] = useState<number[]>(() => getUnlockedTemplateIds());
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('resume_workspace_theme') === 'dark');
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit');
@@ -91,6 +93,12 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
+  const resumeUserPlan = localStorage.getItem('userRole') === 'ADMIN' ? 'ADMIN' : 'FREE';
+  const canAccessTemplate = useCallback(
+    (id: number) => isTemplateAccessible(id, resumeUserPlan, unlockedTemplateIds),
+    [resumeUserPlan, unlockedTemplateIds],
+  );
+
   useEffect(() => {
     localStorage.setItem('resume_workspace_theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
@@ -98,6 +106,22 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
   useEffect(() => {
     localStorage.setItem('resume_workspace_autosave', autoSaveMode);
   }, [autoSaveMode]);
+
+  useEffect(() => {
+    const syncUnlockedTemplates = () => setUnlockedTemplateIds(getUnlockedTemplateIds());
+    window.addEventListener('storage', syncUnlockedTemplates);
+    window.addEventListener('focus', syncUnlockedTemplates);
+    return () => {
+      window.removeEventListener('storage', syncUnlockedTemplates);
+      window.removeEventListener('focus', syncUnlockedTemplates);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canAccessTemplate(activeTemplateId)) {
+      setActiveTemplateId(1);
+    }
+  }, [activeTemplateId, canAccessTemplate]);
 
   useEffect(() => {
     isDirtyTrackingInitialized.current = false;
@@ -180,6 +204,52 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
   const removeListItem = (listName: string, id: number) => {
     const list = (resumeData as any)[listName] || [];
     setResumeData({ ...resumeData, [listName]: list.filter((item: any) => item.id !== id) });
+  };
+
+  const updateSkillLine = (index: number, value: string) => {
+    setResumeData((current) => {
+      const lines = current.skills.split(/\r?\n/).filter((line) => line.trim());
+      if (!lines[index]) return current;
+      const cleanedValue = value.replace(/^[\s•*-]+/, '').trim();
+      lines[index] = `- ${cleanedValue}`;
+      return { ...current, skills: lines.join('\n') };
+    });
+  };
+
+  const templateEditor: TemplateEditor = {
+    updatePersonal: (field, value) => {
+      if (field === 'jobTitle') {
+        setResumeData((current) => ({ ...current, title: value }));
+        return;
+      }
+      setResumeData((current) => ({ ...current, [field]: value }));
+    },
+    updateText: (field, value) => {
+      const targetField = field === 'summary' ? 'objective' : field;
+      setResumeData((current) => ({ ...current, [targetField]: value }));
+    },
+    updateSkill: updateSkillLine,
+    updateEducation: (index, field, value) => {
+      const targetField = field === 'school' ? 'inst' : field === 'year' ? 'duration' : field;
+      setResumeData((current) => ({
+        ...current,
+        educations: current.educations.map((item, itemIndex) => itemIndex === index ? { ...item, [targetField]: value } : item),
+      }));
+    },
+    updateExperience: (index, field, value) => {
+      const targetField = field === 'description' ? 'desc' : field;
+      setResumeData((current) => ({
+        ...current,
+        experiences: current.experiences.map((item, itemIndex) => itemIndex === index ? { ...item, [targetField]: value } : item),
+      }));
+    },
+    updateProject: (index, field, value) => {
+      const targetField = field === 'title' ? 'name' : field === 'tech' ? 'duration' : field === 'description' ? 'desc' : field;
+      setResumeData((current) => ({
+        ...current,
+        projects: current.projects.map((item, itemIndex) => itemIndex === index ? { ...item, [targetField]: value } : item),
+      }));
+    },
   };
 
   const handleAIGenerate = async () => {
@@ -406,57 +476,6 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
       }
     }
   }, [resumeId]);
-
-  // 🚀 HELPER FUNCTION TO MAKE URLs CLICKABLE IN PDF
-  const makeValidUrl = (text: string) => {
-    if (!text) return '#';
-    if (text.startsWith('http://') || text.startsWith('https://')) return text;
-    return `https://${text}`;
-  };
-
-  // ==========================================
-  // DYNAMIC TEMPLATE STYLING LOGIC
-  // ==========================================
-  const isTwoColumn = [2, 3, 5, 6].includes(activeTemplateId);
-
-  let headerAlign = "text-center";
-  let nameFont = "font-sans text-[28px]";
-  let accentText = "text-indigo-700";
-  let sectionBorder = "border-b-[1.5px] border-slate-300 text-slate-900 uppercase tracking-widest pb-1 mb-2";
-  
-  let textBase = "text-slate-800";
-  let textMuted = "text-slate-600";
-  let textBold = "text-slate-900";
-
-  if (activeTemplateId === 1) { 
-      headerAlign = "text-center";
-      nameFont = "font-sans text-[32px] font-black text-black tracking-tight"; 
-      accentText = "text-black hover:text-indigo-600 transition-colors";
-      sectionBorder = "border-b-[2px] border-black text-black font-bold uppercase tracking-widest pb-1 mb-3 mt-5";
-      textBase = "text-black";
-      textMuted = "text-gray-900";
-      textBold = "text-black";
-  } 
-  else if (activeTemplateId === 4) { 
-      headerAlign = "text-left";
-      accentText = "text-teal-700 hover:text-teal-900 transition-colors";
-      sectionBorder = "border-b-2 border-teal-200 text-teal-900 uppercase tracking-widest pb-1 mb-2 mt-4";
-  } 
-  else if (activeTemplateId === 7) { 
-      accentText = "text-purple-700 hover:text-purple-900 transition-colors";
-      sectionBorder = "border-b border-dashed border-purple-400 text-purple-900 uppercase tracking-widest pb-1 mb-2 mt-4";
-  } 
-  else if (activeTemplateId === 8) { 
-      nameFont = "font-serif text-[28px]";
-      accentText = "text-amber-700 hover:text-amber-900 transition-colors";
-      sectionBorder = "border-b-[2px] border-amber-700 text-amber-900 font-serif uppercase tracking-widest pb-1 mb-2 mt-4";
-  }
-
-  let sideBg = "bg-[#1e293b]"; 
-  let sideAccent = "text-indigo-400 hover:text-indigo-300 transition-colors";
-  if (activeTemplateId === 3) { sideBg = "bg-[#0f172a]"; sideAccent = "text-blue-400 hover:text-blue-300 transition-colors"; }
-  if (activeTemplateId === 5) { sideBg = "bg-[#1e3a8a]"; sideAccent = "text-sky-300 hover:text-sky-200 transition-colors"; }
-  if (activeTemplateId === 6) { sideBg = "bg-[#0f766e]"; sideAccent = "text-teal-200 hover:text-teal-100 transition-colors"; }
 
   const shellBg = isDarkMode ? 'bg-slate-900' : 'bg-slate-100';
   const panelBg = isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200';
@@ -731,15 +750,33 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
             </button>
             <div className={`mr-2 flex items-center gap-3 border-r pr-5 ${isDarkMode ? 'border-slate-700' : 'border-slate-300'}`}>
               <span className={`text-xs font-bold uppercase tracking-widest ${mutedText}`}>Layout</span>
-              <select value={activeTemplateId} onChange={(e) => setActiveTemplateId(Number(e.target.value))} className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm font-bold outline-none focus:border-indigo-500 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100' : 'border-slate-300 bg-slate-100 text-slate-700'}`}>
-                <option value={1}>Classic Fresher</option>
-                <option value={2}>Modern Pro</option>
-                <option value={3}>Executive ATS</option>
-                <option value={4}>Minimalist Free</option>
-                <option value={5}>Tech Lead Pro</option>
-                <option value={6}>Creative Designer</option>
-                <option value={7}>Basic Formatter</option>
-                <option value={8}>Senior Manager</option>
+              <select
+                value={activeTemplateId}
+                onChange={(e) => {
+                  const nextTemplateId = Number(e.target.value);
+                  if (canAccessTemplate(nextTemplateId)) setActiveTemplateId(nextTemplateId);
+                }}
+                className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm font-bold outline-none focus:border-indigo-500 ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100' : 'border-slate-300 bg-slate-100 text-slate-700'}`}
+              >
+                {[
+                  [1, 'Template 1 - Free ATS'],
+                  [2, 'Template 2 - Pro Sidebar'],
+                  [3, 'Template 3 - Pro Creative Grid'],
+                  [4, 'Template 4 - Pro Navy Sidebar'],
+                  [5, 'Template 5 - Free Clean'],
+                  [6, 'Template 6 - Pro Modern Split'],
+                  [7, 'Template 7 - Pro Editorial'],
+                  [8, 'Template 8 - Pro Executive'],
+                  [9, 'Template 9 - Free Classic'],
+                ].map(([id, label]) => {
+                  const templateId = Number(id);
+                  const locked = !canAccessTemplate(templateId);
+                  return (
+                    <option key={templateId} value={templateId} disabled={locked}>
+                      {locked ? `${label} - Locked` : label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <button onClick={() => handleSave()} disabled={isSaving} className={`flex items-center gap-2 rounded border px-4 py-1.5 text-sm font-bold ${isDarkMode ? 'border-slate-600 bg-slate-700 text-slate-100 hover:bg-slate-600' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'}`}>
@@ -751,199 +788,8 @@ const ResumeWorkspace: React.FC<ResumeWorkspaceProps> = ({ existingData, templat
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-4 sm:py-8 flex justify-center items-start print:overflow-visible print:p-0">
-          <div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-2xl transition-all print:shadow-none print:m-0 print:w-[210mm] print:max-w-none print:h-auto">
-            
-            {isTwoColumn ? (
-               <div className="flex flex-col font-sans lg:flex-row print:flex-row min-h-[297mm]">
-                  <div className={`p-6 pb-10 text-white lg:w-[32%] print:w-[32%] lg:pb-20 print:pb-20 ${sideBg}`}>
-                     <h1 className="text-2xl font-bold leading-tight mb-6 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, fullName: e.currentTarget.textContent || ''})}>{resumeData.fullName}</h1>
-                     
-                     <div className="space-y-3 text-[11.5px] text-slate-200 mb-8 border-b border-white/20 pb-8">
-                        <div contentEditable suppressContentEditableWarning className="outline-none break-words" onBlur={(e) => setResumeData({...resumeData, phone: e.currentTarget.textContent || ''})}>{resumeData.phone}</div>
-                        <div contentEditable suppressContentEditableWarning className="outline-none break-words" onBlur={(e) => setResumeData({...resumeData, email: e.currentTarget.textContent || ''})}>{resumeData.email}</div>
-                        <div contentEditable suppressContentEditableWarning className="outline-none break-words" onBlur={(e) => setResumeData({...resumeData, location: e.currentTarget.textContent || ''})}>{resumeData.location}</div>
-                        
-                        {/* 🚀 CLICKABLE LINKS FOR 2-COLUMN */}
-                        {resumeData.linkedinText !== undefined && (
-                          <a href={makeValidUrl(resumeData.linkedinText)} target="_blank" rel="noopener noreferrer" className={`block ${sideAccent}`}>
-                            <span contentEditable suppressContentEditableWarning className="outline-none break-words cursor-text" role="textbox" onBlur={(e) => setResumeData({...resumeData, linkedinText: e.currentTarget.textContent || ''})}>{resumeData.linkedinText}</span>
-                          </a>
-                        )}
-                        {resumeData.githubText !== undefined && (
-                          <a href={makeValidUrl(resumeData.githubText)} target="_blank" rel="noopener noreferrer" className={`block ${sideAccent}`}>
-                            <span contentEditable suppressContentEditableWarning className="outline-none break-words cursor-text" role="textbox" onBlur={(e) => setResumeData({...resumeData, githubText: e.currentTarget.textContent || ''})}>{resumeData.githubText}</span>
-                          </a>
-                        )}
-                     </div>
-
-                     <h3 className={`text-xs font-bold uppercase tracking-widest mb-3 ${sideAccent}`}>Skills</h3>
-                     <div className="text-[11.5px] leading-relaxed whitespace-pre-wrap outline-none mb-8" contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, skills: e.currentTarget.textContent || ''})}>{resumeData.skills}</div>
-                     
-                     <h3 className={`text-xs font-bold uppercase tracking-widest mb-3 ${sideAccent}`}>Certifications</h3>
-                     <div className="text-[11.5px] leading-relaxed whitespace-pre-wrap outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, certifications: e.currentTarget.textContent || ''})}>{resumeData.certifications}</div>
-                  </div>
-
-                  <div className="bg-white p-6 text-slate-900 lg:w-[68%] print:w-[68%] lg:p-8 print:p-8">
-                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800 border-b-2 border-slate-200 pb-1 mb-3">Profile</h3>
-                     <p className="text-[12px] leading-relaxed text-justify outline-none mb-6 whitespace-pre-wrap" contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, objective: e.currentTarget.textContent || ''})}>{resumeData.objective}</p>
-
-                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800 border-b-2 border-slate-200 pb-1 mb-4 mt-6">Experience</h3>
-                     <div className="space-y-4">
-                        {resumeData.experiences?.map((exp: any) => (
-                           <div key={exp.id} className="relative group">
-                             <button onClick={() => removeListItem('experiences', exp.id)} className="absolute -left-6 top-1 text-rose-400 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                             <div className="flex justify-between items-baseline mb-0.5">
-                                <h4 className="font-bold text-[13px] outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'company', e.currentTarget.textContent || '')}>{exp.company}</h4>
-                                <span className="text-[11px] font-bold text-slate-500 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'duration', e.currentTarget.textContent || '')}>{exp.duration}</span>
-                             </div>
-                             <div className="text-[12px] text-slate-600 font-medium mb-1.5 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'role', e.currentTarget.textContent || '')}>{exp.role}</div>
-                             <div className="text-[12px] leading-snug whitespace-pre-wrap outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'desc', e.currentTarget.textContent || '')}>{exp.desc}</div>
-                           </div>
-                        ))}
-                     </div>
-
-                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800 border-b-2 border-slate-200 pb-1 mb-4 mt-6">Projects</h3>
-                     <div className="space-y-3">
-                        {resumeData.projects?.map((proj: any) => (
-                           <div key={proj.id} className="relative group">
-                             <button onClick={() => removeListItem('projects', proj.id)} className="absolute -left-6 top-1 text-rose-400 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                             <div className="flex justify-between items-baseline mb-0.5">
-                                <h4 className="font-bold text-[13px] outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'name', e.currentTarget.textContent || '')}>{proj.name}</h4>
-                                <span className="text-[11px] font-bold text-slate-500 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'duration', e.currentTarget.textContent || '')}>{proj.duration}</span>
-                             </div>
-                             <div className="text-[12px] leading-snug whitespace-pre-wrap outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'desc', e.currentTarget.textContent || '')}>{proj.desc}</div>
-                           </div>
-                        ))}
-                     </div>
-
-                     <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800 border-b-2 border-slate-200 pb-1 mb-4 mt-6">Education</h3>
-                     <div className="space-y-3">
-                        {resumeData.educations?.map((edu: any) => (
-                           <div key={edu.id} className="relative group">
-                             <button onClick={() => removeListItem('educations', edu.id)} className="absolute -left-6 top-1 text-rose-400 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                             <div className="flex justify-between items-baseline mb-0.5">
-                                <h4 className="font-bold text-[13px] outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'inst', e.currentTarget.textContent || '')}>{edu.inst}</h4>
-                                <span className="text-[11px] font-bold text-slate-500 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'duration', e.currentTarget.textContent || '')}>{edu.duration}</span>
-                             </div>
-                             <div className="flex justify-between text-[12px] outline-none">
-                                <div contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'degree', e.currentTarget.textContent || '')}>{edu.degree}</div>
-                                <div contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'grade', e.currentTarget.textContent || '')}>{edu.grade}</div>
-                             </div>
-                           </div>
-                        ))}
-                     </div>
-                  </div>
-               </div>
-            ) : (
-               <div className="p-8 sm:p-10 print:p-10 font-sans text-slate-900">
-                  <div className={`mb-6 ${headerAlign}`}>
-                    <h1 className={`font-bold outline-none mb-1 ${nameFont}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, fullName: e.currentTarget.textContent || ''})}>{resumeData.fullName}</h1>
-                    
-                    <div className={`flex flex-wrap gap-x-2 text-[12.5px] font-medium ${textMuted} ${headerAlign === 'text-left' ? 'justify-start' : 'justify-center'}`}>
-                      <span contentEditable suppressContentEditableWarning className="outline-none" onBlur={(e) => setResumeData({...resumeData, phone: e.currentTarget.textContent || ''})}>{resumeData.phone}</span>
-                      <span className="text-slate-300">|</span>
-                      <span contentEditable suppressContentEditableWarning className="outline-none" onBlur={(e) => setResumeData({...resumeData, location: e.currentTarget.textContent || ''})}>{resumeData.location}</span>
-                      <span className="text-slate-300">|</span>
-                      <span contentEditable suppressContentEditableWarning className={`outline-none ${accentText}`} onBlur={(e) => setResumeData({...resumeData, email: e.currentTarget.textContent || ''})}>{resumeData.email}</span>
-                      
-                      {/* 🚀 CLICKABLE LINKS FOR 1-COLUMN */}
-                       {resumeData.linkedinText !== undefined && (
-                        <>
-                          <span className="text-slate-300">|</span>
-                          <a href={makeValidUrl(resumeData.linkedinText)} target="_blank" rel="noopener noreferrer" className={`inline-block hover:underline ${accentText}`}>
-                            <span contentEditable suppressContentEditableWarning className={`outline-none ${accentText} cursor-text`} role="textbox" onBlur={(e) => setResumeData({...resumeData, linkedinText: e.currentTarget.textContent || ''})}>{resumeData.linkedinText}</span>
-                          </a>
-                        </>
-                       )}
-                      
-                       {resumeData.githubText !== undefined && (
-                        <>
-                          <span className="text-slate-300">|</span>
-                          <a href={makeValidUrl(resumeData.githubText)} target="_blank" rel="noopener noreferrer" className={`inline-block hover:underline ${accentText}`}>
-                            <span contentEditable suppressContentEditableWarning className={`outline-none ${accentText} cursor-text`} role="textbox" onBlur={(e) => setResumeData({...resumeData, githubText: e.currentTarget.textContent || ''})}>{resumeData.githubText}</span>
-                          </a>
-                        </>
-                       )}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Objective</h2>
-                    <p className={`text-[12.5px] leading-relaxed text-justify outline-none whitespace-pre-wrap ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, objective: e.currentTarget.textContent || ''})}>{resumeData.objective}</p>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Education</h2>
-                    <div className="space-y-2">
-                       {resumeData.educations?.map((edu: any) => (
-                          <div key={edu.id} className="relative group flex justify-between items-start">
-                            <button onClick={() => removeListItem('educations', edu.id)} className="absolute -left-6 top-0 text-red-500 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                            <div>
-                               <h3 className={`font-bold text-[13px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'inst', e.currentTarget.textContent || '')}>{edu.inst}</h3>
-                               <div className={`text-[12.5px] outline-none mt-0.5 ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'degree', e.currentTarget.textContent || '')}>{edu.degree}</div>
-                            </div>
-                            <div className="text-right">
-                               <div className={`font-bold text-[12.5px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'duration', e.currentTarget.textContent || '')}>{edu.duration}</div>
-                               <div className={`text-[12.5px] outline-none mt-0.5 ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('educations', edu.id, 'grade', e.currentTarget.textContent || '')}>{edu.grade}</div>
-                            </div>
-                          </div>
-                       ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Experience & Training</h2>
-                    <div className="space-y-4">
-                       {resumeData.experiences?.map((exp: any) => (
-                          <div key={exp.id} className="relative group">
-                            <button onClick={() => removeListItem('experiences', exp.id)} className="absolute -left-6 top-0 text-red-500 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                            <div className="flex justify-between items-baseline mb-0.5">
-                               <h3 className={`font-bold text-[13px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'company', e.currentTarget.textContent || '')}>{exp.company}</h3>
-                               <span className={`font-bold text-[12.5px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'duration', e.currentTarget.textContent || '')}>{exp.duration}</span>
-                            </div>
-                            <div className={`italic text-[12.5px] mb-1.5 outline-none ${activeTemplateId === 1 ? 'text-black font-semibold' : accentText}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'role', e.currentTarget.textContent || '')}>{exp.role}</div>
-                            <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('experiences', exp.id, 'desc', e.currentTarget.textContent || '')}>{exp.desc}</div>
-                          </div>
-                       ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Projects</h2>
-                    <div className="space-y-4">
-                       {resumeData.projects?.map((proj: any) => (
-                          <div key={proj.id} className="relative group">
-                            <button onClick={() => removeListItem('projects', proj.id)} className="absolute -left-6 top-0 text-red-500 opacity-0 group-hover:opacity-100 print:hidden"><Trash2 size={12} /></button>
-                            <div className="flex justify-between items-baseline mb-0.5">
-                               <h3 className={`font-bold text-[13px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'name', e.currentTarget.textContent || '')}>{proj.name}</h3>
-                               <span className={`font-bold text-[12.5px] outline-none ${textBold}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'duration', e.currentTarget.textContent || '')}>{proj.duration}</span>
-                            </div>
-                            <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none mt-1 ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => updateList('projects', proj.id, 'desc', e.currentTarget.textContent || '')}>{proj.desc}</div>
-                          </div>
-                       ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Skills</h2>
-                    <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, skills: e.currentTarget.textContent || ''})}>{resumeData.skills}</div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Achievements</h2>
-                    <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, achievements: e.currentTarget.textContent || ''})}>{resumeData.achievements}</div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h2 className={`text-[13px] ${sectionBorder}`}>Certifications & Extracurricular</h2>
-                    <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none mb-2 ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, certifications: e.currentTarget.textContent || ''})}>{resumeData.certifications}</div>
-                    <div className={`text-[12.5px] leading-relaxed whitespace-pre-wrap outline-none ${textBase}`} contentEditable suppressContentEditableWarning onBlur={(e) => setResumeData({...resumeData, extracurricular: e.currentTarget.textContent || ''})}>{resumeData.extracurricular}</div>
-                  </div>
-
-               </div>
-            )}
-          </div>
+        <div className="flex flex-1 items-start justify-center overflow-y-auto px-3 py-5 print:overflow-visible print:p-0 sm:px-4 sm:py-8">
+          <TemplateManager data={resumeData} templateId={activeTemplateId} userPlan={resumeUserPlan} editor={templateEditor} />
         </div>
       </main>
     </div>

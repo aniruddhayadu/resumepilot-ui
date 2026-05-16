@@ -4,7 +4,7 @@ import PublicAts from './pages/PublicAts';
 import AdminDashboard from './pages/AdminDashboard'; 
 import TemplateGallery from './components/TemplateGallery';
 import { login, register, forgotPassword, verifyOtp, getGoogleLoginUrl } from './api'; 
-import { extractEmailFromToken } from './utils/jwt';
+import { extractEmailFromToken, extractRoleFromToken } from './utils/jwt';
 import { getUserEmail, setAuthSession, storageKeys, clearSession } from './utils/storage';
 import { ArrowRight, Sparkles, Target, LayoutTemplate, ShieldCheck } from 'lucide-react';
 
@@ -25,6 +25,11 @@ const App: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
 
+  const normalizeRole = (role?: string | null): string => {
+    const cleanRole = role?.toUpperCase();
+    return cleanRole && cleanRole !== 'FREE' ? cleanRole : 'USER';
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tkn = params.get('token');
@@ -41,14 +46,14 @@ const App: React.FC = () => {
       const extEmail = extractEmailFromToken(tkn) || getUserEmail();
       setAuthSession(tkn, extEmail, uName || undefined);
       window.history.replaceState({}, document.title, "/"); 
-      const role = extEmail === 'aniruddha9131@gmail.com' ? 'ADMIN' : 'USER';
+      const role = normalizeRole(extractRoleFromToken(tkn));
       localStorage.setItem('userRole', role);
       setUserRole(role);
       setHasToken(true);
     } 
     else if (storedTkn) {
       setHasToken(true);
-      const role = !storedRole || storedRole === 'FREE' ? 'USER' : storedRole;
+      const role = normalizeRole(extractRoleFromToken(storedTkn) || storedRole);
       localStorage.setItem('userRole', role);
       setUserRole(role);
     }
@@ -79,7 +84,7 @@ const App: React.FC = () => {
           throw new Error('Authentication failed. No token returned by server.');
         }
         setAuthSession(data.token, cleanEmail, data.fullName);
-        const role = cleanEmail === 'aniruddha9131@gmail.com' ? 'ADMIN' : (data.role || 'USER');
+        const role = normalizeRole(data.role || extractRoleFromToken(data.token));
         localStorage.setItem('userRole', role); 
         setUserRole(role); 
         setHasToken(true);

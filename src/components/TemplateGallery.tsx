@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api, { API_BASE_URL } from '../api/api';
 import { getUserEmail } from '../utils/storage';
+import { getUnlockedTemplateIds, isTemplateAccessible, PREMIUM_TEMPLATES, unlockTemplate } from './TemplateEngine';
 
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || '';
 
@@ -41,6 +42,7 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
   const [tpls, setTpls] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [unlockedTemplateIds, setUnlockedTemplateIds] = useState<number[]>(() => getUnlockedTemplateIds());
 
   useEffect(() => {
     setLoading(true);
@@ -64,6 +66,16 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const syncUnlockedTemplates = () => setUnlockedTemplateIds(getUnlockedTemplateIds());
+    window.addEventListener('storage', syncUnlockedTemplates);
+    window.addEventListener('focus', syncUnlockedTemplates);
+    return () => {
+      window.removeEventListener('storage', syncUnlockedTemplates);
+      window.removeEventListener('focus', syncUnlockedTemplates);
+    };
+  }, []);
+
   const handleSelectTemplate = async (t: Template) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -71,9 +83,11 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
       return;
     }
 
-    const isPro = t.price > 0;
+    const isPro = PREMIUM_TEMPLATES.has(t.id);
+    const isUnlocked = isTemplateAccessible(t.id, localStorage.getItem('userRole'), unlockedTemplateIds);
+    const proPrice = t.price > 0 ? t.price : 99;
 
-    if (!isPro) {
+    if (!isPro || isUnlocked) {
       onSelect(t.id);
       return;
     }
@@ -84,13 +98,13 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
       }
 
       const orderResponse = await api.post('/api/payments/create-order',
-        { amount: t.price },
+        { amount: proPrice },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
       const options = {
         key: RAZORPAY_KEY,
-        amount: t.price * 100,
+        amount: proPrice * 100,
         currency: 'INR',
         name: 'ResumePilot Premium',
         description: t.name,
@@ -102,6 +116,7 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
               email: getUserEmail() || 'user@example.com',
             }, { headers: { Authorization: `Bearer ${token}` } });
 
+            setUnlockedTemplateIds(unlockTemplate(t.id));
             alert(`Payment Success! Template Unlocked. ID: ${res.razorpay_payment_id}`);
             onSelect(t.id);
           } catch {
@@ -158,7 +173,9 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
       {tpls.map((t, idx) => {
-        const isPro = t.price > 0;
+        const isPro = PREMIUM_TEMPLATES.has(t.id);
+        const isUnlocked = isTemplateAccessible(t.id, localStorage.getItem('userRole'), unlockedTemplateIds);
+        const proPrice = t.price > 0 ? t.price : 99;
         const isSelected = selectedId === t.id;
 
         return (
@@ -187,7 +204,7 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 {isPro ? (
                   <span className="inline-flex w-fit items-center rounded-lg border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-sm font-bold text-amber-200 shadow-sm">
-                    PRO - INR {t.price}
+                    {isUnlocked ? 'UNLOCKED' : `PRO - INR ${proPrice}`}
                   </span>
                 ) : (
                   <span className="inline-flex w-fit items-center rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-bold text-emerald-200 shadow-sm">
@@ -199,7 +216,7 @@ const TemplateGallery: React.FC<Props> = ({ onSelect, selectedId }) => {
                   onClick={() => handleSelectTemplate(t)}
                   className={`rounded-lg px-5 py-2 text-sm font-bold shadow-sm transition-all duration-300 active:scale-95 ${isSelected ? 'bg-indigo-400/15 text-indigo-100 ring-1 ring-indigo-300/25 hover:bg-indigo-400/20' : 'bg-indigo-600 text-white shadow-indigo-500/20 hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30'}`}
                 >
-                  {isSelected ? 'Selected' : (isPro ? 'Buy & Use' : 'Select')}
+                  {isSelected ? 'Selected' : (isPro && !isUnlocked ? 'Buy & Use' : 'Select')}
                 </button>
               </div>
             </div>
